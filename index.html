@@ -1,0 +1,2308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมคำนวณรายได้สินเชื่อและประเมินความสามารถในการผ่อน</title>
+    <!-- React 18 & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Prompt & Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Prompt', 'Sarabun', sans-serif;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            
+            /* ปรับแต่งความสูงของหน้ากระดาษเพื่อบังคับเลย์เอาต์การพิมพ์อย่างถูกต้อง */
+            html, body {
+                height: auto !important;
+                background-color: white !important;
+                color: #0f172a !important; 
+                font-size: 9.5px !important;
+                line-height: 1.15 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            /* การ์ดรายงานเวอร์ชันพิมพ์: กระชับพื้นที่สูงสุดเพื่อให้พอดี A4 */
+            .print-card { 
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                background-color: white !important;
+                padding: 5px 8px !important; 
+                border-radius: 6px !important;
+                margin-bottom: 3px !important; 
+                page-break-inside: avoid !important;
+            }
+            
+            @page {
+                size: A4 portrait;
+                margin: 0.3cm 0.4cm 0.3cm 0.4cm !important;
+            }
+            
+            /* บังคับเลย์เอาต์คู่ขนานใน 1 หน้ากระดาษ A4 ร่วมกันทั้งหมด */
+            .main-grid {
+                display: grid !important;
+                grid-template-cols: 1.35fr 1.15fr !important;
+                gap: 8px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            /* ตารางบันทึกรายได้แบบกระชับตัวพิมพ์ */
+            table th, table td {
+                padding: 1px 2px !important; 
+                font-size: 8.5px !important;
+                border-bottom: 1px solid #cbd5e1 !important;
+                color: #0f172a !important;
+            }
+            
+            input, select {
+                font-size: 8.5px !important;
+                padding: 1px !important;
+                border: none !important;
+                background: transparent !important;
+                color: #0f172a !important;
+            }
+            
+            h1 {
+                font-size: 12px !important; 
+                margin-bottom: 1px !important;
+                font-weight: 700 !important;
+                color: #0f172a !important;
+            }
+            
+            h2 {
+                font-size: 10px !important; 
+                margin-bottom: 1.5px !important;
+                font-weight: 700 !important;
+                color: #0f172a !important;
+            }
+            
+            p, span, div {
+                color: #0f172a !important;
+            }
+
+            /* ปรับแต่งความโดดเด่นของสีพื้นหลังและขอบในโหมดพิมพ์ */
+            .print-clear-card {
+                background-color: #f8fafc !important; 
+                border: 1.5px solid #0f172a !important; 
+                color: #0f172a !important;
+                text-align: center !important;
+                padding: 3px !important;
+                border-radius: 6px !important;
+            }
+            .print-clear-card p {
+                color: #0f172a !important;
+                font-weight: 700 !important;
+            }
+            .print-clear-card .text-3xl {
+                font-size: 14px !important; 
+                font-weight: 800 !important;
+                color: #000000 !important;
+            }
+
+            /* การ์ดความสามารถการผ่อนชำระสวัสดิการ */
+            .print-capacity-box-welfare {
+                background-color: #f0fdf4 !important; 
+                border: 1.5px solid #16a34a !important; 
+                padding: 4px !important;
+                border-radius: 6px !important;
+            }
+            .print-capacity-value-welfare {
+                font-size: 16px !important; 
+                font-weight: 900 !important;
+                color: #15803d !important; 
+                display: block !important;
+                margin-top: 1px !important;
+                margin-bottom: 1px !important;
+            }
+
+            /* การ์ดความสามารถการผ่อนชำระรายได้อื่น / รายย่อย */
+            .print-capacity-box-retail {
+                background-color: #f5f3ff !important; 
+                border: 1.5px solid #6366f1 !important; 
+                padding: 4px !important;
+                border-radius: 6px !important;
+            }
+            .print-capacity-value-retail {
+                font-size: 16px !important;
+                font-weight: 900 !important;
+                color: #4f46e5 !important;
+                display: block !important;
+                margin-top: 1px !important;
+                margin-bottom: 1px !important;
+            }
+            .print-capacity-desc {
+                font-size: 8.5px !important;
+                font-weight: 700 !important;
+                color: #374151 !important;
+            }
+
+            /* เพิ่มเติมสไตล์ปรับขนาดตัวอักษรและตารางของหน้า 2 YTD Audit ให้ชัดเจนและตัวใหญ่ขึ้น */
+            .print-page-2 h2 {
+                font-size: 13px !important;
+                margin-bottom: 6px !important;
+                font-weight: 800 !important;
+            }
+            .print-page-2 table th {
+                padding: 4px 6px !important;
+                font-size: 11px !important;
+                font-weight: 700 !important;
+                background-color: #f1f5f9 !important;
+            }
+            .print-page-2 table td {
+                padding: 4px 6px !important;
+                font-size: 10.5px !important;
+            }
+
+            /* ควบคุมกฎการจัดสรรหน้าเมื่อสั่งพิมพ์แบบหน้าหลัง (Duplex printing) */
+            .single-page-print {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                height: 100% !important;
+            }
+            .print-page-1 {
+                page-break-after: always !important;
+                break-after: page !important;
+            }
+            .print-page-2 {
+                page-break-before: always !important;
+                break-before: page !important;
+                margin-top: 0.8cm !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen font-sans">
+    <div id="root"></div>
+
+    <script>
+        const { useState, useEffect, createElement: e } = React;
+
+        // ระยะเวลาเก็บรักษาข้อมูลในประวัติ (90 วัน ในหน่วยมิลลิวินาที)
+        const RETENTION_PERIOD_MS = 90 * 24 * 60 * 60 * 1000;
+
+        // ฟังก์ชันจัดฟอร์แมตตัวเลขหลักพัน (ใส่คอมมา)
+        function formatNum(num) {
+            const n = Math.round(Number(num));
+            return isNaN(n) ? "0" : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
+        // ฟังก์ชันจัดฟอร์แมตตัวเลขทศนิยม 2 ตำแหน่ง
+        function formatDecimal(num) {
+            const n = Number(num);
+            return isNaN(n) ? "0.00" : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // รายชื่อบริษัทเฝ้าระวังเริ่มต้นเป็นข้อมูลตัวอย่าง
+        const defaultWatchlist = [
+            { id: 1, name: "บจก. เทคโนโลยี ปลอมแปลงการเงิน", remark: "เคยมีประวัติเอกสารรับรองเงินเดือนปลอมแปลง ให้ระมัดระวังเป็นพิเศษและสืบค้นเบอร์ตรงสำนักงานใหญ่" },
+            { id: 2, name: "สมมติ ดีไซน์ แอนด์ บิวท์", remark: "ผู้มีอำนาจลงนามไม่อยู่ในประเทศไทย หนังสือรับรองเงินเดือนมักส่งมาเป็นสำเนารูปถ่ายสแกน ให้ตรวจสอบใบเสร็จประกันสังคมประกอบ" },
+            { id: 3, name: "บมจ. อภิมหาโปรเจค กรุ๊ป", remark: "อยู่ในกลุ่มเสี่ยงจดทะเบียนสถานประกอบการว่างเปล่า ตรวจสอบแผนที่ที่ตั้งบริษัทว่ามีอยู่จริงหรือไม่" }
+        ];
+
+        // ฟังก์ชันล้างค่าตัวอักษรเพื่อเช็คความคล้ายคลึงของชื่อบริษัท (กำจัดส่วนขยายต่างๆ)
+        const cleanCompanyName = (name) => {
+            if (!name) return '';
+            return name.replace(/(บริษัท|จำกัด|มหาชน|บจก\.|บมจ\.|จำกัด\s*\(มหาชน\))/g, '')
+                       .replace(/\s+/g, '')
+                       .toLowerCase();
+        };
+
+        // ฟังก์ชันคำนวณหาค่าความคล้ายคลึง (Fuzzy String Similarity - Bigram Coefficient)
+        const checkSimilarity = (userComp, watchComp) => {
+            const cleanUser = cleanCompanyName(userComp);
+            const cleanWatch = cleanCompanyName(watchComp);
+            if (!cleanUser || !cleanWatch) return false;
+            
+            // 1. ตรวจสอบในกรณีชื่อตรงกันทั้งหมดหรือมีส่วนย่อยที่ซ้อนทับกันเต็มพิกัด
+            if (cleanUser === cleanWatch) return true;
+            if (cleanUser.includes(cleanWatch) || cleanWatch.includes(cleanUser)) return true;
+            
+            // 2. ตรวจสอบความคล้ายระดับตัวอักษร (Bigram similarity)
+            const getBigrams = (str) => {
+                const bigrams = new Set();
+                for (let i = 0; i < str.length - 1; i++) {
+                    bigrams.add(str.substring(i, i + 2));
+                }
+                return bigrams;
+            };
+            
+            const b1 = getBigrams(cleanUser);
+            const b2 = getBigrams(cleanWatch);
+            if (b1.size === 0 || b2.size === 0) return false;
+            
+            let intersection = 0;
+            b1.forEach(val => {
+                if (b2.has(val)) intersection++;
+            });
+            
+            const similarity = (2 * intersection) / (b1.size + b2.size);
+            return similarity > 0.55; // ถ้าความคล้ายคลึงกันเกิน 55% ให้ขึ้นสัญญาณแจ้งเตือน
+        };
+
+        function CurrencyInput({ value, onChange, className, disabled, isRed, containerClass, placeholder, allowDecimal }) {
+            const [isFocused, setIsFocused] = useState(false);
+            const [expression, setExpression] = useState('');
+
+            const safeEvaluate = (str) => {
+                if (!str) return 0;
+                let clean = str.toString().replace(/\s+/g, '');
+                if (!/^[0-9+\-*/().]+$/.test(clean)) {
+                    return NaN;
+                }
+                try {
+                    const fn = new Function(`return (${clean})`);
+                    const result = fn();
+                    return typeof result === 'number' && !isNaN(result) ? result : NaN;
+                } catch (err) {
+                    return NaN;
+                }
+            };
+
+            useEffect(() => {
+                if (!isFocused) {
+                    const currentEval = safeEvaluate(expression);
+                    if (isNaN(currentEval) || Math.abs(currentEval - Number(value)) > 0.01) {
+                        setExpression(value === 0 || value === '0' ? '' : String(value));
+                    }
+                }
+            }, [value, isFocused]);
+
+            const handleFocus = () => {
+                setIsFocused(true);
+                setExpression(expression === '0' ? '' : expression);
+            };
+
+            const handleBlur = () => {
+                setIsFocused(false);
+                const evaluated = safeEvaluate(expression);
+                if (!isNaN(evaluated)) {
+                    const finalVal = allowDecimal ? evaluated.toString() : Math.round(evaluated).toString();
+                    onChange(finalVal);
+                } else {
+                    const fallback = parseFloat(value) || 0;
+                    setExpression(fallback === 0 ? '' : fallback.toString());
+                    onChange(fallback.toString());
+                }
+            };
+
+            const handleChange = (event) => {
+                const val = event.target.value;
+                if (/^[0-9+\-*/().\s]*$/.test(val)) {
+                    setExpression(val);
+                    const evaluated = safeEvaluate(val);
+                    if (!isNaN(evaluated)) {
+                        onChange(allowDecimal ? evaluated.toString() : Math.round(evaluated).toString());
+                    }
+                }
+            };
+
+            const isFormula = /[+\-*/]/.test(expression) && !isNaN(safeEvaluate(expression));
+            const hasCustomPadding = className && (className.includes('px-') || className.includes('py-'));
+            const paddingClasses = hasCustomPadding ? '' : 'px-3 py-1.5';
+            const widthClass = containerClass && (containerClass.includes('w-') || containerClass.includes('max-w-')) ? '' : 'w-full';
+
+            return e('div', { className: `relative ${widthClass} ${containerClass || ''}` }, [
+                isFormula && !isFocused && e('span', {
+                    key: 'fx-badge',
+                    className: 'absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-black bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded border border-emerald-300 pointer-events-none select-none z-10 animate-pulse'
+                }, 'fx'),
+                e('input', {
+                    key: 'input-el',
+                    type: "text",
+                    value: isFocused ? expression : (allowDecimal ? formatDecimal(value) : formatNum(value)),
+                    onFocus: handleFocus,
+                    onBlur: handleBlur,
+                    onChange: handleChange,
+                    disabled: disabled,
+                    placeholder: placeholder || (allowDecimal ? "0.00" : "0"),
+                    className: `w-full ${paddingClasses} text-right border rounded-lg transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                        disabled 
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' 
+                        : 'border-slate-300 hover:border-slate-400'
+                    } ${isRed ? 'text-rose-600 font-semibold' : 'text-slate-800'} ${className || ''} print:border-none print:shadow-none print:bg-transparent print:p-0 print:text-right print:font-bold`
+                })
+            ]);
+        }
+
+        function App() {
+            const [customerName, setCustomerName] = useState('');
+            const [companyName, setCompanyName] = useState(''); 
+            const [loanAmount, setLoanAmount] = useState(''); 
+            const [borrowerAge, setBorrowerAge] = useState(''); 
+            
+            const [customerType, setCustomerType] = useState('welfare'); 
+            const [monthsCount, setMonthsCount] = useState(3); 
+            const [employeeType, setEmployeeType] = useState('monthly'); 
+            const [isManufacturing, setIsManufacturing] = useState(false);
+            
+            const [slipType, setSlipType] = useState('standard'); 
+            
+            const [isOverOneYear, setIsOverOneYear] = useState(false);
+            const [isStableCompany, setIsStableCompany] = useState(false);
+            const [useSpecialRetail, setUseSpecialRetail] = useState(true);
+
+            const [hasExtraDeductions, setHasExtraDeductions] = useState(false);
+            const [showVarDetails, setShowVarDetails] = useState(true);
+
+            const [showYtdAudit, setShowYtdAudit] = useState(false);
+            const [ytdData, setYtdData] = useState({});
+
+            const [debtBurden, setDebtBurden] = useState(0);
+            const [deductionOther, setDeductionOther] = useState(0);
+            const [deductionLabel, setDeductionLabel] = useState('หักอื่นๆ'); 
+            const [taxManual, setTaxManual] = useState(0); 
+            
+            // ระบบบัญชีดำ/เฝ้าระวังบริษัท
+            const [watchlist, setWatchlist] = useState([]);
+            const [matchedWatchlistCompany, setMatchedWatchlistCompany] = useState(null);
+            
+            // ระบบ Admin Panel
+            const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+            const [adminPassword, setAdminPassword] = useState('');
+            const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+            const [adminNewName, setAdminNewName] = useState('');
+            const [adminNewRemark, setAdminNewRemark] = useState('');
+
+            // ระบบคัดลอก DBD
+            const [dbdCopied, setDbdCopied] = useState(false);
+
+            // ระบบ Custom Confirmation แทนระบบ confirm ของ Browser
+            const [confirmConfig, setConfirmConfig] = useState(null);
+
+            const [varColumns, setVarColumns] = useState([
+                { id: 'ot', label: 'OT' },
+                { id: 'comm', label: 'ค่าคอมมิชชั่น' },
+                { id: 'extra', label: 'เบี้ยขยัน / ค่าเที่ยว' },
+                { id: 'other', label: 'รายได้อื่น ๆ' }
+            ]);
+
+            const [incomeData, setIncomeData] = useState(Array.from({ length: 12 }, (_, i) => ({ 
+                id: i, label: '', baseSalary: 0, ot: 0, comm: 0, extra: 0, other: 0, deduction: 0 
+            })));
+
+            const [welfarePercent, setWelfarePercent] = useState(0.8);
+            const [retailFraction, setRetailFraction] = useState(0.3333); 
+
+            const [history, setHistory] = useState([]);
+            const [historySearchTerm, setHistorySearchTerm] = useState(''); 
+            const [alertMessage, setAlertMessage] = useState(null);
+
+            const calculatedTerm = borrowerAge ? Math.max(0, Math.min(40, 70 - Number(borrowerAge))) : 40;
+
+            // โหลดประวัติและบัญชีดำบริษัทตอนเปิดแอพ พร้อมการสแกนลบข้อมูลประวัติที่เก่าเกิน 90 วัน
+            useEffect(() => {
+                const storedHistory = localStorage.getItem('loan_calc_history');
+                if (storedHistory) {
+                    try { 
+                        const parsedHistory = JSON.parse(storedHistory);
+                        const currentTime = Date.now();
+                        
+                        // คัดกรองเก็บไว้เฉพาะรายการที่มีอายุไม่เกิน 90 วัน
+                        const validHistory = parsedHistory.filter(item => {
+                            const recordAge = currentTime - Number(item.id || 0);
+                            return recordAge < RETENTION_PERIOD_MS;
+                        });
+
+                        setHistory(validHistory);
+                        
+                        // หากประวัติมีการโดนลบเนื่องจากหมดอายุ ให้บันทึกอัปเดตลง localStorage ด้วย
+                        if (validHistory.length !== parsedHistory.length) {
+                            localStorage.setItem('loan_calc_history', JSON.stringify(validHistory));
+                        }
+                    } catch (e) { 
+                        console.error(e); 
+                    }
+                }
+
+                const storedWatchlist = localStorage.getItem('ghb_company_watchlist');
+                if (storedWatchlist) {
+                    try {
+                        setWatchlist(JSON.parse(storedWatchlist));
+                    } catch (e) {
+                        setWatchlist(defaultWatchlist);
+                    }
+                } else {
+                    setWatchlist(defaultWatchlist);
+                    localStorage.setItem('ghb_company_watchlist', JSON.stringify(defaultWatchlist));
+                }
+            }, []);
+
+            // ตรวจสอบชื่อหน่วยงานแบบ Realtime ค้นหาความเข้าข่ายบริษัทกลุ่มเสี่ยง
+            useEffect(() => {
+                if (!companyName.trim()) {
+                    setMatchedWatchlistCompany(null);
+                    return;
+                }
+                const match = watchlist.find(item => checkSimilarity(companyName, item.name));
+                setMatchedWatchlistCompany(match || null);
+            }, [companyName, watchlist]);
+
+            useEffect(() => {
+                if (customerName.trim()) {
+                    document.title = `รายงานประเมินสินเชื่อ_${customerName.trim()}`;
+                } else {
+                    document.title = "โปรแกรมคำนวณรายได้สินเชื่อและประเมินความสามารถในการผ่อน";
+                }
+            }, [customerName]);
+
+            useEffect(() => {
+                if (customerType === 'welfare') {
+                    setEmployeeType('monthly');
+                    setMonthsCount(3);
+                    setIsManufacturing(false);
+                    setSlipType('standard');
+                }
+            }, [customerType]);
+
+            const addVarColumn = () => {
+                if (varColumns.length >= 8) {
+                    setAlertMessage('จำกัดการเพิ่มหัวข้อรายได้แปรผันสูงสุดไม่เกิน 8 รายการครับ');
+                    return;
+                }
+                const newId = `var_${Date.now()}`;
+                const newCol = { id: newId, label: `รายได้แปรผันใหม่ ${varColumns.length + 1}` };
+                setVarColumns([...varColumns, newCol]);
+
+                const updatedData = incomeData.map(row => ({
+                    ...row,
+                    [newId]: 0
+                }));
+                setIncomeData(updatedData);
+            };
+
+            const removeVarColumn = (id) => {
+                if (varColumns.length <= 1) {
+                    setAlertMessage('ระบบต้องมีหัวข้อรายได้แปรผันอย่างน้อย 1 รายการครับ');
+                    return;
+                }
+                setVarColumns(varColumns.filter(col => col.id !== id));
+                
+                const updatedData = incomeData.map(row => {
+                    const copy = { ...row };
+                    delete copy[id];
+                    return copy;
+                });
+                setIncomeData(updatedData);
+            };
+
+            // ตรวจสอบความต่อเนื่องของรายได้เสริม
+            const checkVarIncomeContinuity = (key) => {
+                const limit = slipType === 'double' ? monthsCount * 2 : monthsCount;
+                const subset = incomeData.slice(0, limit);
+
+                if (slipType === 'double') {
+                    const monthlySums = [];
+                    for (let i = 0; i < monthsCount; i++) {
+                        const sum = (subset[i * 2]?.[key] || 0) + (subset[i * 2 + 1]?.[key] || 0);
+                        monthlySums.push(sum);
+                    }
+                    return monthlySums.every(val => val > 0);
+                } else {
+                    return subset.every(row => (row[key] || 0) > 0);
+                }
+            };
+
+            // คำนวณรายได้แบบเฉลี่ย (ตามกฎความต่อเนื่อง)
+            const calculateAdjustedVar = (key) => {
+                const limit = slipType === 'double' ? monthsCount * 2 : monthsCount;
+                const subset = incomeData.slice(0, limit);
+
+                const isContinuous = checkVarIncomeContinuity(key);
+                if (!isContinuous) return 0;
+
+                if (slipType === 'double') {
+                    const totalSum = subset.reduce((acc, row) => acc + (row[key] || 0), 0);
+                    return Math.floor(totalSum / monthsCount);
+                } else {
+                    const sum = subset.reduce((acc, row) => acc + (row[key] || 0), 0);
+                    return Math.floor(sum / monthsCount); 
+                }
+            };
+
+            const activeRowsCount = slipType === 'double' ? monthsCount * 2 : monthsCount;
+            const dataSubset = incomeData.slice(0, activeRowsCount);
+            
+            const finalBase = (employeeType === 'monthly' && slipType === 'standard') 
+                ? (incomeData[0]?.baseSalary || 0) 
+                : Math.floor(dataSubset.reduce((sum, row) => sum + row.baseSalary, 0) / monthsCount);
+
+            const finalDeduction = (employeeType === 'monthly' && slipType === 'standard') 
+                ? (incomeData[0]?.deduction || 0) 
+                : Math.ceil(dataSubset.reduce((sum, row) => sum + row.deduction, 0) / monthsCount);
+            
+            const activeDebtBurden = debtBurden;
+            const activeDeductionOther = hasExtraDeductions ? deductionOther : 0;
+            const activeTaxManual = hasExtraDeductions ? taxManual : 0;
+
+            const totalDeductions = Math.ceil(finalDeduction + activeDeductionOther + activeDebtBurden + activeTaxManual);
+            const netBaseSalary = finalBase - totalDeductions;
+            const hasSpecialSalaryThreshold = netBaseSalary >= 20000;
+
+            useEffect(() => {
+                if (customerType === 'welfare') {
+                    setIsOverOneYear(false);
+                    setIsStableCompany(false);
+                }
+            }, [customerType, netBaseSalary]);
+
+            const isConstant3Months = (key) => {
+                if (slipType === 'double') {
+                    const m0 = (incomeData[0]?.[key] || 0) + (incomeData[1]?.[key] || 0);
+                    const m1 = (incomeData[2]?.[key] || 0) + (incomeData[3]?.[key] || 0);
+                    const m2 = (incomeData[4]?.[key] || 0) + (incomeData[5]?.[key] || 0);
+                    return m0 > 0 && m0 === m1 && m1 === m2;
+                } else {
+                    const v0 = incomeData[0]?.[key] || 0;
+                    const v1 = incomeData[1]?.[key] || 0;
+                    const v2 = incomeData[2]?.[key] || 0;
+                    return v0 > 0 && v0 === v1 && v1 === v2;
+                }
+            };
+
+            const calculateVarIncomeWithCondition = (key) => {
+                const avgVal = calculateAdjustedVar(key);
+                if (customerType === 'welfare') {
+                    return avgVal;
+                }
+                if (isManufacturing && !isConstant3Months(key)) {
+                    return Math.floor(avgVal * 0.8);
+                }
+                return avgVal;
+            };
+
+            const totalVar = varColumns.reduce((sum, col) => sum + calculateVarIncomeWithCondition(col.id), 0);
+            const netIncome = Math.floor((finalBase + totalVar) - totalDeductions);
+
+            const netSalaryOnly = finalBase - finalDeduction - activeTaxManual;
+            const netTotalWithOther = netSalaryOnly + totalVar;
+
+            const isSpecialRetailEligible = customerType === 'retail' && hasSpecialSalaryThreshold && isOverOneYear && isStableCompany;
+            const welfareCapacity = Math.floor((finalBase - totalDeductions) * welfarePercent);
+            
+            let retailCapacity = 0;
+            if (customerType === 'welfare') {
+                retailCapacity = Math.floor(totalVar * retailFraction);
+            } else {
+                if (isSpecialRetailEligible && useSpecialRetail) {
+                    retailCapacity = Math.floor(netBaseSalary / 2) + Math.floor(totalVar / 3);
+                } else {
+                    retailCapacity = Math.floor(netIncome * retailFraction);
+                }
+            }
+
+            const activeCapacity = customerType === 'welfare' ? welfareCapacity : retailCapacity;
+
+            // ฟังก์ชันเรียกใช้หน้าต่างยืนยันที่สร้างขึ้นใหม่เพื่อทดแทน confirm() ของ Browser
+            const triggerConfirm = (message, onConfirm) => {
+                setConfirmConfig({ message, onConfirm });
+            };
+
+            const handleAdminLogin = () => {
+                if (adminPassword === "GHB9999") {
+                    setIsAdminAuthenticated(true);
+                    setAdminPassword('');
+                } else {
+                    setAlertMessage('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                }
+            };
+
+            const handleAddWatchlist = () => {
+                if (!adminNewName.trim() || !adminNewRemark.trim()) {
+                    setAlertMessage('กรุณากรอกทั้งชื่อบริษัทและหมายเหตุเตือนภัยให้ครบถ้วน');
+                    return;
+                }
+                const newCompany = {
+                    id: Date.now(),
+                    name: adminNewName.trim(),
+                    remark: adminNewRemark.trim()
+                };
+                const updatedList = [newCompany, ...watchlist];
+                setWatchlist(updatedList);
+                localStorage.setItem('ghb_company_watchlist', JSON.stringify(updatedList));
+                setAdminNewName('');
+                setAdminNewRemark('');
+                setAlertMessage('เพิ่มรายชื่อบริษัทเฝ้าระวังภัยเรียบร้อยแล้ว');
+            };
+
+            const handleDeleteWatchlist = (id) => {
+                const updatedList = watchlist.filter(item => item.id !== id);
+                setWatchlist(updatedList);
+                localStorage.setItem('ghb_company_watchlist', JSON.stringify(updatedList));
+            };
+
+            const handleExportWatchlist = () => {
+                try {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(watchlist, null, 2));
+                    const downloadAnchorElement = document.createElement('a');
+                    downloadAnchorElement.setAttribute("href", dataStr);
+                    downloadAnchorElement.setAttribute("download", `loan_company_watchlist_backup_${Date.now()}.json`);
+                    document.body.appendChild(downloadAnchorElement);
+                    downloadAnchorElement.click();
+                    downloadAnchorElement.remove();
+                    setAlertMessage('ดาวน์โหลดไฟล์สำรองข้อมูลบริษัทเฝ้าระวังเรียบร้อยแล้ว!');
+                } catch (err) {
+                    setAlertMessage('เกิดข้อผิดพลาดในการสำรองข้อมูล: ' + err.message);
+                }
+            };
+
+            const handleImportWatchlist = (event) => {
+                const fileReader = new FileReader();
+                const file = event.target.files[0];
+                if (!file) return;
+
+                fileReader.onload = (e) => {
+                    try {
+                        const parsedData = JSON.parse(e.target.result);
+                        if (Array.isArray(parsedData)) {
+                            const isValid = parsedData.every(item => item && typeof item === 'object' && 'name' in item && 'remark' in item);
+                            if (isValid) {
+                                const importedList = parsedData.map(item => ({
+                                    id: item.id || Date.now() + Math.random(),
+                                    name: item.name.toString().trim(),
+                                    remark: item.remark.toString().trim()
+                                }));
+                                
+                                triggerConfirm(`คุณต้องการนำเข้าข้อมูลบริษัทเฝ้าระวังจำนวน ${importedList.length} รายการ เพื่อเขียนทับฐานข้อมูลปัจจุบันใช่หรือไม่?`, () => {
+                                    setWatchlist(importedList);
+                                    localStorage.setItem('ghb_company_watchlist', JSON.stringify(importedList));
+                                    setAlertMessage('นำเข้าข้อมูลสำเร็จและบันทึกข้อมูลเรียบร้อยแล้ว!');
+                                });
+                            } else {
+                                setAlertMessage('โครงสร้างไฟล์ข้อมูลไม่ถูกต้อง กรุณาใช้ไฟล์ที่สำรองข้อมูลจากระบบนี้เท่านั้น');
+                            }
+                        } else {
+                            setAlertMessage('รูปแบบไฟล์ข้อมูลไม่ถูกต้อง (ต้องเป็นรายการอาร์เรย์แบบ JSON)');
+                        }
+                    } catch (err) {
+                        setAlertMessage('ไม่สามารถอ่านไฟล์ได้เนื่องจากข้อมูลชำรุดเสียหาย: ' + err.message);
+                    }
+                };
+                fileReader.readAsText(file, "UTF-8");
+                event.target.value = null; 
+            };
+
+            const handleLogoutAdmin = () => {
+                setIsAdminAuthenticated(false);
+                setIsAdminModalOpen(false);
+            };
+
+            const loadSampleData = () => {
+                setCustomerName('สมชาย มุ่งมั่น');
+                setCompanyName('บจก. เทคโนโลยี ปลอมแปลงการเงิน'); 
+                setLoanAmount('3500000');
+                setBorrowerAge('35');
+                setCustomerType('retail');
+                setMonthsCount(6);
+                setEmployeeType('monthly');
+                setSlipType('standard');
+                setIsManufacturing(true);
+                setIsOverOneYear(true);
+                setIsStableCompany(true);
+                setUseSpecialRetail(true);
+                setHasExtraDeductions(true); 
+                setDebtBurden(4500);
+                setDeductionOther(1200);
+                setDeductionLabel('หักกบข. / หักอื่นๆ');
+                setTaxManual(850);
+                
+                setVarColumns([
+                    { id: 'ot', label: 'OT' },
+                    { id: 'comm', label: 'ค่าคอมมิชชั่น' },
+                    { id: 'extra', label: 'เบี้ยขยัน / ค่าเที่ยว' },
+                    { id: 'other', label: 'รายได้อื่น ๆ' }
+                ]);
+
+                const samples = Array.from({ length: 12 }, (_, i) => ({
+                    id: i, label: '', baseSalary: 0, ot: 0, comm: 0, extra: 0, other: 0, deduction: 0 
+                }));
+                
+                const dataValues = [
+                    { baseSalary: 28000, ot: 3500.50, comm: 5000, extra: 1000, other: 1500, deduction: 450 },
+                    { baseSalary: 28000, ot: 4200.25, comm: 4500, extra: 1000, other: 1200, deduction: 450 },
+                    { baseSalary: 28000, ot: 2900, comm: 6200.80, extra: 1000, other: 800, deduction: 450 },
+                    { baseSalary: 28000, ot: 5100, comm: 3000, extra: 1000.50, other: 2000, deduction: 450 },
+                    { baseSalary: 28000, ot: 3800, comm: 5500, extra: 1000, other: 1100.25, deduction: 450 },
+                    { baseSalary: 28000, ot: 4000, comm: 4800, extra: 1000, other: 1300, deduction: 450 }
+                ];
+
+                dataValues.forEach((val, idx) => {
+                    samples[idx] = { id: idx, label: '', ...val };
+                });
+
+                setIncomeData(samples);
+
+                setYtdData({
+                    0: { gross: 39000.75, actualYtd: 233000.80, ytdDeduction: 1000.00 },
+                    1: { gross: 38900.25, actualYtd: 194000.05, ytdDeduction: 0 },
+                    2: { gross: 38900.80, actualYtd: 155099.80, ytdDeduction: 500.00 },
+                    3: { gross: 39150.50, actualYtd: 116199.00, ytdDeduction: 0 },
+                    4: { gross: 39400.25, actualYtd: 77048.50, ytdDeduction: 0 },
+                    5: { gross: 37648.25, actualYtd: 37648.25, ytdDeduction: 0 }
+                });
+                setShowYtdAudit(true);
+            };
+
+            const resetForm = () => {
+                setCustomerName('');
+                setCompanyName('');
+                setLoanAmount('');
+                setBorrowerAge('');
+                setHasExtraDeductions(false);
+                setDebtBurden(0);
+                setDeductionOther(0);
+                setDeductionLabel('หักอื่นๆ');
+                setTaxManual(0);
+                setIsOverOneYear(false);
+                setIsStableCompany(false);
+                setUseSpecialRetail(true);
+                setSlipType('standard');
+                setShowYtdAudit(false);
+                setYtdData({});
+                setVarColumns([
+                    { id: 'ot', label: 'OT' },
+                    { id: 'comm', label: 'ค่าคอมมิชชั่น' },
+                    { id: 'extra', label: 'เบี้ยขยัน / ค่าเที่ยว' },
+                    { id: 'other', label: 'รายได้อื่น ๆ' }
+                ]);
+                setIncomeData(Array.from({ length: 12 }, (_, i) => ({ 
+                    id: i, label: '', baseSalary: 0, ot: 0, comm: 0, extra: 0, other: 0, deduction: 0 
+                })));
+            };
+
+            const handleInputChange = (index, field, value) => {
+                const numValue = parseFloat(value) || 0;
+                const newData = [...incomeData];
+                newData[index][field] = numValue;
+                setIncomeData(newData);
+            };
+
+            const updateMonths = (firstMonthLabel) => {
+                const monthsThai = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                const match = firstMonthLabel.match(/([ก-๙\.\s]+)(\d{2})/);
+                if (match) {
+                    let [_, monthName, yearStr] = match;
+                    monthName = monthName.trim();
+                    let monthIdx = monthsThai.findIndex(m => m === monthName);
+                    if (monthIdx === -1) monthIdx = monthsThai.findIndex(m => monthName.includes(m.replace('.', '')));
+                    if (monthIdx === -1) return;
+
+                    let yearNum = parseInt(yearStr);
+                    const newData = [...incomeData];
+
+                    if (slipType === 'double') {
+                        newData[0].label = `${firstMonthLabel} (1)`;
+                        newData[1].label = `${firstMonthLabel} (2)`;
+                        for (let i = 1; i < 6; i++) {
+                            let m = monthIdx - i;
+                            let y = yearNum;
+                            if (m < 0) { m += 12; y -= 1; }
+                            const formattedLabel = `${monthsThai[m]}${y.toString().padStart(2, '0')}`;
+                            newData[i * 2].label = `${formattedLabel} (1)`;
+                            newData[i * 2 + 1].label = `${formattedLabel} (2)`;
+                        }
+                    } else {
+                        newData[0].label = firstMonthLabel;
+                        for (let i = 1; i < 6; i++) {
+                            let m = monthIdx - i;
+                            let y = yearNum;
+                            if (m < 0) { m += 12; y -= 1; }
+                            newData[i].label = `${monthsThai[m]}${y.toString().padStart(2, '0')}`;
+                        }
+                    }
+                    setIncomeData(newData);
+                }
+            };
+
+            useEffect(() => {
+                if (incomeData[0]?.label) {
+                    const rawLabel = incomeData[0].label.replace(/\s*\(\d\)/, '');
+                    updateMonths(rawLabel);
+                }
+            }, [slipType]);
+
+            const getRowTotalGross = (row) => {
+                let total = parseFloat(row.baseSalary) || 0;
+                varColumns.forEach(col => {
+                    total += parseFloat(row[col.id] || 0);
+                });
+                return total;
+            };
+
+            const isJanuary = (label) => {
+                if (!label) return false;
+                const clean = label.toLowerCase();
+                return clean.includes('ม.ค') || clean.includes('มกรา') || clean.includes('jan');
+            };
+
+            const getCalculatedYtdList = () => {
+                const chronologicalRows = [...incomeData.slice(0, activeRowsCount)].reverse();
+                let calcYtdObj = {};
+                let runningYtd = 0;
+
+                chronologicalRows.forEach((row, idx) => {
+                    const savedState = ytdData[row.id] || {};
+                    const grossInput = savedState.gross !== undefined && savedState.gross !== null 
+                        ? parseFloat(savedState.gross) 
+                        : 0;
+                    
+                    const ytdDeduct = parseFloat(savedState.ytdDeduction) || 0; 
+                    const netYtdAddition = grossInput - ytdDeduct;
+                    
+                    if (idx === 0) {
+                        const startingYtdBase = savedState.actualYtd !== undefined && savedState.actualYtd !== null 
+                            ? parseFloat(savedState.actualYtd) 
+                            : 0;
+                        runningYtd = startingYtdBase;
+                        calcYtdObj[row.id] = runningYtd;
+                    } else {
+                        if (isJanuary(row.label)) {
+                            runningYtd = netYtdAddition; 
+                        } else {
+                            runningYtd = runningYtd + netYtdAddition; 
+                        }
+                        calcYtdObj[row.id] = runningYtd;
+                    }
+                });
+
+                return calcYtdObj;
+            };
+
+            const calculatedYtdObj = getCalculatedYtdList();
+
+            const handleYtdValueChange = (rowId, field, value) => {
+                const cleanValue = value.replace(/[^0-9.]/g, '');
+                const parts = cleanValue.split('.');
+                let finalValue = parts[0];
+                if (parts.length > 1) {
+                    finalValue += '.' + parts.slice(1).join('');
+                }
+                const numValue = parseFloat(finalValue) || 0;
+
+                setYtdData(prev => ({
+                    ...prev,
+                    [rowId]: {
+                        ...prev[rowId],
+                        [field]: numValue
+                    }
+                }));
+            };
+
+            const pullGrossFromSlip = () => {
+                const updatedYtd = { ...ytdData };
+                incomeData.slice(0, activeRowsCount).forEach(row => {
+                    updatedYtd[row.id] = {
+                        ...updatedYtd[row.id],
+                        gross: getRowTotalGross(row)
+                    };
+                });
+                setYtdData(updatedYtd);
+                setAlertMessage('ดึงข้อมูลรายรับรวมทั้งหมดจากตารางสลิปเข้าสู่ระบบตรวจสอบ YTD สำเร็จแล้ว!');
+            };
+
+            const clearYtdData = () => {
+                const cleared = {};
+                incomeData.forEach(row => {
+                    cleared[row.id] = { gross: 0, actualYtd: 0, ytdDeduction: 0 };
+                });
+                setYtdData(cleared);
+                setAlertMessage('เคลียร์ข้อมูลประวัติสะสม YTD ทั้งหมดเริ่มต้นที่ 0 เรียบร้อยแล้ว');
+            };
+
+            const saveToHistory = () => {
+                if (!customerName) {
+                    setAlertMessage('กรุณากรอกชื่อลูกค้าก่อนบันทึกข้อมูลครับ');
+                    return;
+                }
+                const newRecord = {
+                    id: Date.now(), 
+                    customerName,
+                    companyName, 
+                    loanAmount,
+                    borrowerAge,
+                    customerType,
+                    monthsCount,
+                    employeeType,
+                    slipType,
+                    isManufacturing,
+                    isOverOneYear,
+                    isStableCompany,
+                    useSpecialRetail,
+                    hasExtraDeductions,
+                    debtBurden: activeDebtBurden,
+                    deductionOther: activeDeductionOther,
+                    deductionLabel,
+                    taxManual: activeTaxManual,
+                    varColumns,
+                    incomeData,
+                    netIncome,
+                    capacity: activeCapacity,
+                    showYtdAudit,
+                    ytdData,
+                    welfarePercent,
+                    retailFraction,
+                    date: new Date().toLocaleDateString('th-TH') + ' ' + new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})
+                };
+                
+                const currentTime = Date.now();
+                const freshHistory = history.filter(item => {
+                    const recordAge = currentTime - Number(item.id || 0);
+                    return recordAge < RETENTION_PERIOD_MS;
+                });
+
+                const updatedHistory = [newRecord, ...freshHistory].slice(0, 100);
+                setHistory(updatedHistory);
+                localStorage.setItem('loan_calc_history', JSON.stringify(updatedHistory));
+                setAlertMessage('บันทึกประวัติสำเร็จแล้ว! (ข้อมูลจะถูกบันทึกไว้ในเบราว์เซอร์นี้เป็นเวลา 90 วัน)');
+            };
+
+            const loadHistoryItem = (item) => {
+                if (!item) return;
+                setCustomerName(item.customerName || '');
+                setCompanyName(item.companyName || ''); 
+                setLoanAmount(item.loanAmount || '');
+                setBorrowerAge(item.borrowerAge || '');
+                setCustomerType(item.customerType || 'welfare');
+                setMonthsCount(item.monthsCount || 3);
+                setEmployeeType(item.employeeType || 'monthly');
+                setSlipType(item.slipType || 'standard');
+                setIsManufacturing(item.isManufacturing || false);
+                setIsOverOneYear(item.isOverOneYear || false);
+                setIsStableCompany(item.isStableCompany || false);
+                setUseSpecialRetail(item.useSpecialRetail !== undefined ? item.useSpecialRetail : true);
+                
+                setHasExtraDeductions(item.hasExtraDeductions || false);
+                setDebtBurden(item.debtBurden || 0);
+                setDeductionOther(item.deductionOther || 0);
+                setDeductionLabel(item.deductionLabel || 'หักอื่นๆ');
+                setTaxManual(item.taxManual || 0);
+                
+                setShowYtdAudit(item.showYtdAudit || false);
+                setYtdData(item.ytdData || {});
+                
+                if (item.welfarePercent !== undefined) setWelfarePercent(item.welfarePercent);
+                if (item.retailFraction !== undefined) setRetailFraction(item.retailFraction);
+
+                if (item.varColumns) setVarColumns(item.varColumns);
+                if (item.incomeData) setIncomeData(item.incomeData);
+                setAlertMessage(`เรียกคืนข้อมูลของ "${item.customerName}" เรียบร้อยแล้ว!`);
+            };
+
+            const deleteHistoryItem = (id, event) => {
+                event.stopPropagation();
+                const updatedHistory = history.filter(item => item.id !== id);
+                setHistory(updatedHistory);
+                localStorage.setItem('loan_calc_history', JSON.stringify(updatedHistory));
+            };
+
+            // ฟังก์ชันคัดลอกลงคลิปบอร์ดแบบปลอดภัย
+            const copyToClipboard = (text) => {
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = text;
+                tempTextArea.style.position = 'fixed';
+                tempTextArea.style.left = '-9999px';
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                try {
+                    document.execCommand('copy');
+                    return true;
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    return false;
+                } finally {
+                    document.body.removeChild(tempTextArea);
+                }
+            };
+
+            const openSearch = (type) => {
+                if (!companyName.trim()) {
+                    setAlertMessage('กรุณากรอกชื่อสถานที่ทำงานเพื่อประกอบการใช้ปุ่มทางลัดนี้ครับ');
+                    return;
+                }
+                
+                let url = '';
+                if (type === 'tel') {
+                    url = `https://www.google.com/search?q=${encodeURIComponent(companyName + ' เบอร์โทร ติดต่อ โทรศัพท์ เบอร์โทรศัพท์ สำนักงานใหญ่')}`;
+                } else if (type === 'map') {
+                    url = `https://www.google.com/maps?q=${encodeURIComponent(companyName)}`;
+                } else if (type === 'dbd') {
+                    // ล้างประเภทนิติบุคคลโดยตัดคำว่า "บริษัท", "จำกัด", "มหาชน" และ "(มหาชน)"
+                    const cleanedName = companyName
+                        .replace(/\(มหาชน\)/g, '')
+                        .replace(/(บริษัท|จำกัด|มหาชน|บจก\.|บมจ\.|บจ\.)/g, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    
+                    copyToClipboard(cleanedName);
+                    setDbdCopied(true);
+                    setTimeout(() => setDbdCopied(false), 2000);
+                    url = `https://datawarehouse.dbd.go.th/search?keyWord=${encodeURIComponent(cleanedName)}`;
+                }
+                
+                if (url) window.open(url, '_blank');
+            };
+
+            const filteredHistory = history.filter(item => {
+                if (!historySearchTerm.trim()) return true;
+                const searchLower = historySearchTerm.toLowerCase();
+                const customerNameLower = (item.customerName || '').toLowerCase();
+                const companyNameLower = (item.companyName || '').toLowerCase();
+                return customerNameLower.includes(searchLower) || companyNameLower.includes(searchLower);
+            });
+
+            return e('div', { className: 'py-6 px-4 max-w-7xl mx-auto print:py-1 print:px-2' }, [
+                
+                // Custom Notification Modal (Alert แทน browser alert)
+                alertMessage && e('div', { key: 'alert-modal', className: 'fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 no-print' }, [
+                    e('div', { className: 'bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-slate-100' }, [
+                        e('p', { className: 'text-base font-semibold text-slate-800 mb-4' }, alertMessage),
+                        e('button', { 
+                            onClick: () => setAlertMessage(null),
+                            className: 'px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition'
+                        }, 'ตกลง')
+                    ])
+                ]),
+
+                // Custom Confirm Modal (ยืนยันคำสั่งทางเลือกระหว่างงานต่าง ๆ)
+                confirmConfig && e('div', { key: 'confirm-modal', className: 'fixed inset-0 bg-black/55 z-[110] flex items-center justify-center p-4 no-print' }, [
+                    e('div', { className: 'bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-slate-100' }, [
+                        e('p', { className: 'text-sm font-bold text-slate-800 mb-5' }, confirmConfig.message),
+                        e('div', { className: 'flex justify-center gap-2.5' }, [
+                            e('button', {
+                                onClick: () => {
+                                    confirmConfig.onConfirm();
+                                    setConfirmConfig(null);
+                                },
+                                className: 'px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition'
+                            }, 'ยืนยัน'),
+                            e('button', {
+                                onClick: () => setConfirmConfig(null),
+                                className: 'px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition'
+                            }, 'ยกเลิก')
+                        ])
+                    ])
+                ]),
+
+                // --- Admin Panel Watchlist Manager Modal ---
+                isAdminModalOpen && e('div', { key: 'admin-modal', className: 'fixed inset-0 bg-black/65 z-[90] flex items-center justify-center p-4 no-print overflow-y-auto' }, [
+                    e('div', { className: 'bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]' }, [
+                        e('div', { className: 'flex justify-between items-center border-b border-slate-200 pb-3 mb-4' }, [
+                            e('h3', { className: 'text-lg font-bold text-slate-900 flex items-center gap-2' }, [
+                                e('span', null, '🔒'),
+                                'ระบบบริหารจัดการรายชื่อบริษัทเฝ้าระวังภัย (Admin)'
+                            ]),
+                            e('button', { 
+                                onClick: handleLogoutAdmin,
+                                className: 'text-slate-400 hover:text-slate-600 text-lg font-bold'
+                            }, '✕')
+                        ]),
+
+                        !isAdminAuthenticated ? e('div', { className: 'space-y-4 py-6 text-center' }, [
+                            e('p', { className: 'text-sm text-slate-500' }, 'กรุณากรอกรหัสผ่าน Admin เพื่อความปลอดภัยในการเข้าถึงฐานข้อมูลนี้'),
+                            e('div', { className: 'max-w-xs mx-auto space-y-3' }, [
+                                e('input', {
+                                    type: 'password',
+                                    placeholder: 'ระบุรหัสผ่านผู้ดูแลระบบ',
+                                    value: adminPassword,
+                                    onChange: (e) => setAdminPassword(e.target.value),
+                                    onKeyDown: (e) => e.key === 'Enter' && handleAdminLogin(),
+                                    className: 'w-full px-3 py-2 border border-slate-300 rounded-lg text-center font-bold focus:ring-2 focus:ring-blue-500 outline-none'
+                                }),
+                                e('button', {
+                                    onClick: handleAdminLogin,
+                                    className: 'w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition'
+                                }, 'ยืนยันรหัสผ่าน')
+                            ])
+                        ]) : e('div', { className: 'space-y-4 flex flex-col overflow-hidden' }, [
+                            // แบบฟอร์มเพิ่มบริษัท
+                            e('div', { className: 'p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 shrink-0' }, [
+                                e('h4', { className: 'text-xs font-bold text-slate-700' }, '➕ เพิ่มรายชื่อบริษัทเข้าข่ายต้องระมัดระวังเป็นพิเศษ'),
+                                e('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-3' }, [
+                                    e('input', {
+                                        placeholder: 'ระบุชื่อบริษัท (เช่น บจก. ตัวอย่าง)',
+                                        value: adminNewName,
+                                        onChange: (e) => setAdminNewName(e.target.value),
+                                        className: 'px-3 py-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500'
+                                    }),
+                                    e('input', {
+                                        placeholder: 'ระบุหมายเหตุ/พฤติการณ์เตือนภัยเพื่อแจ้งพนักงาน',
+                                        value: adminNewRemark,
+                                        onChange: (e) => setAdminNewRemark(e.target.value),
+                                        className: 'px-3 py-2 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500'
+                                    })
+                                ]),
+                                e('div', { className: 'text-right' }, [
+                                    e('button', {
+                                        onClick: handleAddWatchlist,
+                                        className: 'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition'
+                                    }, 'บันทึกรายชื่อใหม่')
+                                ])
+                            ]),
+
+                            // แผงควบคุมการสำรองและเรียกคืนข้อมูลบัญชีเฝ้าระวัง
+                            e('div', { className: 'p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3 shrink-0' }, [
+                                e('h4', { className: 'text-xs font-bold text-blue-800 flex items-center gap-1.5' }, [
+                                    e('span', null, '💾'),
+                                    'สำรองและเรียกคืนฐานข้อมูลเฝ้าระวัง'
+                                ]),
+                                e('div', { className: 'flex flex-wrap gap-2.5' }, [
+                                    e('button', {
+                                        onClick: handleExportWatchlist,
+                                        className: 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm'
+                                    }, [
+                                        e('span', null, '📥'),
+                                        'สำรองข้อมูลเฝ้าระวัง (Export JSON)'
+                                    ]),
+                                    e('label', {
+                                        className: 'px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-sm select-none'
+                                    }, [
+                                        e('span', null, '📤'),
+                                        'เรียกคืนข้อมูลสำรอง (Import JSON)',
+                                        e('input', {
+                                            type: 'file',
+                                            accept: '.json',
+                                            onChange: handleImportWatchlist,
+                                            className: 'hidden'
+                                        })
+                                    ])
+                                ]),
+                                e('p', { className: 'text-[10px] text-slate-400 font-medium' }, '* นำเข้าไฟล์ .json ที่ดาวน์โหลดสำรองไว้จากระบบนี้เท่านั้น เพื่อความต่อเนื่องของข้อมูลการเฝ้าระวัง')
+                            ]),
+
+                            // รายชื่อบริษัทในปัจจุบัน
+                            e('div', { className: 'flex-1 overflow-y-auto space-y-2' }, [
+                                e('h4', { className: 'text-xs font-black text-slate-600' }, `📋 รายการบริษัทยังคงอยู่ในสารบบเฝ้าระวัง (${watchlist.length} รายการ)`),
+                                e('div', { className: 'divide-y divide-slate-100' }, 
+                                    watchlist.map(item => e('div', { 
+                                        key: item.id, 
+                                        className: 'py-2.5 flex justify-between items-start gap-4 text-xs' 
+                                    }, [
+                                        e('div', { className: 'space-y-1' }, [
+                                            e('p', { className: 'font-bold text-slate-800' }, item.name),
+                                            e('p', { className: 'text-rose-600 font-medium' }, `⚠️ หมายเหตุ: ${item.remark}`)
+                                        ]),
+                                        e('button', {
+                                            onClick: () => handleDeleteWatchlist(item.id),
+                                            className: 'px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded text-[10px] transition'
+                                        }, 'ลบออก')
+                                    ]))
+                                )
+                            ]),
+
+                            e('div', { className: 'border-t border-slate-200 pt-3 flex justify-between shrink-0' }, [
+                                e('button', {
+                                    onClick: handleLogoutAdmin,
+                                    className: 'px-4 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold rounded-lg'
+                                }, 'ปิดหน้าต่าง'),
+                                e('button', {
+                                    onClick: () => {
+                                        triggerConfirm('คุณต้องการรีเซ็ตฐานข้อมูลบริษัทเฝ้าระวังกลับสู่ค่าตั้งต้นใช่หรือไม่?', () => {
+                                            setWatchlist(defaultWatchlist);
+                                            localStorage.setItem('ghb_company_watchlist', JSON.stringify(defaultWatchlist));
+                                        });
+                                    },
+                                    className: 'px-4 py-2 text-rose-500 hover:underline text-xs font-semibold'
+                                }, 'รีเซ็ตกลับสู่ค่าโรงงาน')
+                            ])
+                        ])
+                    ])
+                ]),
+
+                e('header', { key: 'header', className: 'mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-200 pb-4 print:pb-1 print:mb-2' }, [
+                    e('div', null, [
+                        e('h1', { className: 'text-2xl md:text-3xl font-bold text-slate-950 flex items-center gap-2 print:text-base' }, [
+                            e('span', { className: 'bg-blue-600 text-white p-1 rounded-lg no-print' }, '🏦'),
+                            'ระบบวิเคราะห์รายได้ประเมินสินเชื่อ'
+                        ]),
+                        e('p', { className: 'text-slate-500 text-sm mt-1 print:hidden' }, 'เครื่องมือช่วยคำนวณรายได้สุทธิและวิเคราะห์ประเมินความสามารถในการชำระหนี้รายเดือนของผู้ขอสินเชื่อ พร้อมระบบเฝ้าระวังภัยทุจริต')
+                    ]),
+                    e('div', { className: 'flex gap-2 no-print' }, [
+                        e('button', {
+                            onClick: () => setIsAdminModalOpen(true),
+                            className: 'px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition text-sm flex items-center gap-1.5 shadow-sm'
+                        }, [
+                            e('span', null, '🔐'),
+                            'ถังข้อมูลเฝ้าระวังบริษัท (Admin)'
+                        ]),
+                        e('button', { 
+                            onClick: loadSampleData, 
+                            className: 'px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition text-sm flex items-center gap-1.5' 
+                        }, '💡 ดึงข้อมูลตัวอย่าง'),
+                        e('button', { 
+                            onClick: resetForm, 
+                            className: 'px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 font-medium rounded-lg transition text-sm' 
+                        }, 'เคลียร์ข้อมูล')
+                    ])
+                ]),
+
+                // แสดงผลป้ายแจ้งเตือนทันทีหากพบว่าพนักงานทำงานในเครือข่ายบริษัทสุ่มเสี่ยง
+                matchedWatchlistCompany && e('div', { 
+                    key: 'company-risk-warning', 
+                    className: 'mb-4 p-4 bg-rose-50 border-2 border-rose-600 rounded-2xl flex items-start gap-3 text-rose-900 animate-pulse'
+                }, [
+                    e('span', { className: 'text-2xl mt-0.5' }, '⚠️'),
+                    e('div', { className: 'space-y-1' }, [
+                        e('p', { className: 'font-black text-sm md:text-base' }, `สัญญาณแจ้งเตือน: ตรวจพบรายชื่อบริษัทใกล้เคียงกับบัญชีเฝ้าระวังภัยพึงระวังเอกสารปลอม`),
+                        e('p', { className: 'text-xs font-semibold' }, `ชื่อที่ตรวจพบ: ${matchedWatchlistCompany.name}`),
+                        e('p', { className: 'text-xs text-rose-800' }, `ข้อมูลและพฤติการณ์ที่ควรสังเกต: ${matchedWatchlistCompany.remark}`),
+                        e('p', { className: 'text-[10px] text-rose-500 italic mt-1' }, '* โปรดใช้ความละเอียดรอบคอบในการทวนสิทธิ์และใช้ระบบตรวจสอบ YTD ประกอบการประเมิน')
+                    ])
+                ]),
+
+                e('div', { key: 'main-layout', className: `grid grid-cols-1 lg:grid-cols-3 gap-6 main-grid ${showYtdAudit ? 'print-page-1' : 'single-page-print'}` }, [
+                    
+                    e('div', { className: 'lg:col-span-2 space-y-4 print:space-y-1.5' }, [
+                        
+                        // การ์ดส่วนข้อมูลลูกค้าทั่วไป
+                        e('div', { className: 'bg-white p-5 rounded-2xl border border-slate-200 shadow-sm print-card' }, [
+                            e('h2', { className: 'text-base font-bold text-slate-900 mb-3 pb-1 border-b border-slate-100 flex items-center gap-2 print:border-b-2 print:border-slate-800' }, [
+                                e('span', { className: 'text-blue-500 print:hidden' }, '👤'),
+                                'ข้อมูลผู้ขอสินเชื่อ'
+                            ]),
+                            
+                            // จัดเรียงฟิลด์ลูกค้าและสถานที่ทำงาน
+                            e('div', { className: 'grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-4 print:gap-3 mb-4 print:mb-2' }, [
+                                e('div', { className: 'print:flex print:flex-col print:items-start' }, [
+                                    e('label', { className: 'block text-xs font-bold text-slate-600 mb-1 print:mb-0 print:text-[10px] print:text-blue-900' }, 'ชื่อผู้ขอสินเชื่อ:'),
+                                    e('input', { 
+                                        className: 'w-full border border-slate-300 p-2.5 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-base md:text-lg font-bold text-slate-900 print:hidden', 
+                                        placeholder: 'ระบุชื่อลูกค้า', 
+                                        value: customerName, 
+                                        onChange: (e) => setCustomerName(e.target.value) 
+                                    }),
+                                    e('span', { className: 'hidden print:inline font-black text-slate-950 text-xl border-b border-slate-400 pb-0.5 w-full uppercase' }, customerName || '-')
+                                ]),
+                                e('div', { className: 'print:flex print:flex-col print:items-start relative' }, [
+                                    e('label', { className: 'block text-xs font-bold text-slate-600 mb-1 print:mb-0 print:text-[10px]' }, 'ที่ทำงาน/บริษัท:'),
+                                    e('div', { className: 'relative w-full print:hidden' }, [
+                                        e('input', { 
+                                            className: `w-full border p-2.5 rounded-lg outline-none focus:ring-2 text-base md:text-lg font-bold text-slate-900 ${
+                                                matchedWatchlistCompany 
+                                                    ? 'border-rose-400 bg-rose-50 focus:ring-rose-500' 
+                                                    : 'border-slate-300 focus:ring-blue-500'
+                                            }`, 
+                                            placeholder: 'ระบุชื่อบริษัทนายจ้าง', 
+                                            value: companyName, 
+                                            onChange: (e) => setCompanyName(e.target.value) 
+                                        }),
+                                        matchedWatchlistCompany && e('span', { 
+                                            className: 'absolute right-3 top-1/2 -translate-y-1/2 text-rose-600 font-extrabold text-sm animate-bounce' 
+                                        }, '⚠️ ตรวจพบความเสี่ยง')
+                                    ]),
+                                    e('span', { className: 'hidden print:inline font-black text-slate-900 text-base border-b border-slate-400 pb-0.5 w-full' }, [
+                                        companyName || '-',
+                                        matchedWatchlistCompany && e('span', { className: 'text-rose-700 text-xs font-black block mt-0.5' }, `(ระวัง: ${matchedWatchlistCompany.remark})`)
+                                    ])
+                                ])
+                            ]),
+
+                            // ส่วนกรอกวงเงินกู้, อายุผู้กู้ และแสดงระยะเวลาผ่อนสูงสุด
+                            e('div', { className: 'grid grid-cols-1 md:grid-cols-3 print:grid-cols-3 gap-4 print:gap-3 mb-4 print:mb-2 border-t border-slate-100 pt-3 print:pt-1.5' }, [
+                                e('div', { className: 'print:flex print:flex-col print:items-start' }, [
+                                    e('label', { className: 'block text-xs font-bold text-slate-600 mb-1 print:mb-0 print:text-[10px]' }, 'วงเงินกู้ขอเสนอ (บาท):'),
+                                    e('div', { className: 'print:hidden w-full' }, [
+                                        e(CurrencyInput, {
+                                            value: loanAmount,
+                                            onChange: (v) => setLoanAmount(v),
+                                            placeholder: 'ไม่บังคับ',
+                                            className: 'text-left font-bold text-slate-800'
+                                        })
+                                    ]),
+                                    e('span', { className: 'hidden print:inline font-bold text-slate-800 text-sm border-b border-slate-400 pb-0.5 w-full text-left' }, loanAmount ? `${formatNum(loanAmount)} บาท` : 'ไม่ระบุ')
+                                ]),
+                                e('div', { className: 'print:flex print:flex-col print:items-start' }, [
+                                    e('label', { className: 'block text-xs font-bold text-slate-600 mb-1 print:mb-0 print:text-[10px]' }, 'อายุผู้กู้ (ปี):'),
+                                    e('input', {
+                                        type: 'number',
+                                        min: '18',
+                                        max: '100',
+                                        className: 'w-full border border-slate-300 p-2.5 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-base font-bold text-slate-900 text-center print:hidden',
+                                        placeholder: 'ระบุอายุ',
+                                        value: borrowerAge,
+                                        onChange: (e) => setBorrowerAge(e.target.value)
+                                    }),
+                                    e('span', { className: 'hidden print:inline font-bold text-slate-800 text-sm border-b border-slate-400 pb-0.5 w-full text-left' }, borrowerAge ? `${borrowerAge} ปี` : '-')
+                                ]),
+                                e('div', { className: 'print:flex print:flex-col print:items-start' }, [
+                                    e('label', { className: 'block text-xs font-bold text-slate-600 mb-1 print:mb-0 print:text-[10px]' }, 'ระยะเวลาผ่อนสูงสุด (ปี):'),
+                                    e('div', { className: 'w-full bg-blue-50 border border-blue-200 p-2.5 rounded-lg text-base font-black text-blue-700 text-center print:hidden' }, 
+                                        borrowerAge ? `${calculatedTerm} ปี` : 'สูงสุด 40 ปี'
+                                    ),
+                                    e('span', { className: 'hidden print:inline font-black text-blue-800 text-sm border-b border-slate-400 pb-0.5 w-full text-left' }, borrowerAge ? `${calculatedTerm} ปี` : 'สูงสุด 40 ปี')
+                                ])
+                            ]),
+
+                            e('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2 border-t border-slate-100 pt-3 print:pt-1.5' }, [
+                                e('div', { className: 'flex flex-col gap-1' }, [
+                                    e('label', { className: 'text-xs font-semibold text-slate-500' }, 'ประเภทโครงการสินเชื่อ'),
+                                    e('select', { 
+                                        className: 'border border-slate-300 px-3 py-2 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none no-print', 
+                                        value: customerType, 
+                                        onChange: (e) => {
+                                            setCustomerType(e.target.value);
+                                            if(e.target.value === 'welfare') {
+                                                setIsOverOneYear(false);
+                                                setIsStableCompany(false);
+                                            }
+                                        } 
+                                    }, [
+                                        e('option', { value: 'welfare' }, 'ลูกค้าสวัสดิการ (หักผ่านบัญชีเงินเดือน)'), 
+                                        e('option', { value: 'retail' }, 'ลูกค้ารายย่อยทั่วไป')
+                                    ]),
+                                    e('p', { className: 'hidden print:block text-xs font-bold text-slate-800' }, customerType === 'welfare' ? 'ประเภทโครงการ: ลูกค้าสวัสดิการ (หักผ่านบัญชี)' : 'ประเภทโครงการ: ลูกค้ารายย่อยทั่วไป')
+                                ]),
+                                e('div', { className: 'flex gap-1.5 no-print items-end' }, [
+                                    e('button', {
+                                        onClick: () => openSearch('tel'),
+                                        className: 'flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-100 rounded-lg text-xs transition flex flex-row items-center justify-center gap-1.5 h-[38px]',
+                                        title: 'ค้นหาเบอร์โทรติดต่อใน Google'
+                                    }, [
+                                        e('span', null, '📞'),
+                                        'เบอร์ติดต่อ'
+                                    ]),
+                                    e('button', {
+                                        onClick: () => openSearch('dbd'),
+                                        className: 'flex-1 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold border border-amber-100 rounded-lg text-xs transition flex flex-row items-center justify-center gap-1.5 h-[38px]',
+                                        title: 'ระบบจะตัดคำว่า "บริษัท", "จำกัด", "(มหาชน)" พร้อมคัดลอกลง Clipboard และเปิดระบบ DBD'
+                                    }, [
+                                        e('span', null, dbdCopied ? '📋' : '🏢'),
+                                        dbdCopied ? 'คัดลอกชื่อแล้ว!' : 'ค้นหา DBD'
+                                    ]),
+                                    e('button', {
+                                        onClick: () => openSearch('map'),
+                                        className: 'flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-100 rounded-lg text-xs transition flex flex-row items-center justify-center gap-1.5 h-[38px]',
+                                        title: 'ตรวจสอบพิกัดที่ตั้งบริษัท'
+                                    }, [
+                                        e('span', null, '📍'),
+                                        'แผนที่ที่ตั้ง'
+                                    ])
+                                ])
+                            ]),
+
+                            e('div', { className: `grid grid-cols-1 ${customerType === 'welfare' ? 'md:grid-cols-2' : 'md:grid-cols-4'} gap-3 mt-3 pt-3 border-t border-slate-100 no-print` }, [
+                                e('div', { className: 'flex flex-col gap-1' }, [
+                                    e('label', { className: 'text-[11px] font-semibold text-slate-500' }, 'ระยะเวลาคำนวณเฉลี่ย'),
+                                    customerType === 'welfare' 
+                                        ? e('div', { className: 'border border-blue-200 bg-blue-50/50 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-700 flex items-center justify-between h-[34px]' }, [
+                                            e('span', null, '⏱️ บังคับ 3 เดือน'),
+                                            e('span', { className: 'text-[9px] bg-blue-600 text-white px-1 py-0.5 rounded' }, 'ล็อก')
+                                          ])
+                                        : e('select', { 
+                                            className: 'border border-slate-300 px-3 py-1.5 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none h-[34px]', 
+                                            value: monthsCount, 
+                                            onChange: (e) => setMonthsCount(parseInt(e.target.value)) 
+                                          }, [
+                                            e('option', { value: 6 }, 'ย้อนหลัง 6 เดือน'), 
+                                            e('option', { value: 3 }, 'ย้อนหลัง 3 เดือน')
+                                          ])
+                                ]),
+                                e('div', { className: 'flex flex-col gap-1' }, [
+                                    e('label', { className: 'text-[11px] font-semibold text-slate-500' }, 'รูปแบบการจ่ายเงินเดือน'),
+                                    e('select', { 
+                                        className: `border px-3 py-1.5 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none h-[34px] ${customerType === 'welfare' ? 'bg-slate-100 cursor-not-allowed text-slate-400 border-slate-200' : 'border-slate-300'}`, 
+                                        value: employeeType, 
+                                        onChange: (e) => setEmployeeType(e.target.value),
+                                        disabled: customerType === 'welfare'
+                                    }, [
+                                        e('option', { value: 'monthly' }, 'พนักงานรายเดือน'), 
+                                        e('option', { value: 'daily' }, 'พนักงานรายวัน / ฟรีแลนซ์')
+                                    ])
+                                ]),
+                                customerType === 'retail' && e('div', { className: 'flex flex-col gap-1' }, [
+                                    e('label', { className: 'text-[11px] font-semibold text-slate-500' }, 'รูปแบบสลิปรายเดือน'),
+                                    e('select', {
+                                        className: 'border border-slate-300 px-3 py-1.5 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 outline-none h-[34px]',
+                                        value: slipType,
+                                        onChange: (e) => setSlipType(e.target.value)
+                                    }, [
+                                        e('option', { value: 'standard' }, 'ปกติ (1 ใบ / เดือน)'),
+                                        e('option', { value: 'double' }, 'สลิปคู่ (2 ใบ / เดือน - รวม 12 ใบ)')
+                                    ])
+                                ]),
+                                customerType === 'retail' && e('div', { className: 'flex items-end' }, [
+                                    e('label', { className: 'flex items-center gap-2 border border-slate-200 p-1.5 rounded-lg bg-slate-50 cursor-pointer w-full select-none hover:bg-blue-50/50 transition h-[34px]' }, [
+                                        e('input', { 
+                                            type: 'checkbox', 
+                                            checked: isManufacturing, 
+                                            onChange: (e) => setIsManufacturing(e.checked),
+                                            className: 'w-4 h-4 rounded text-blue-600 focus:ring-blue-500'
+                                        }),
+                                        e('div', null, [
+                                            e('p', { className: 'text-[11px] font-bold text-slate-700' }, 'กลุ่มการผลิต,ขายปลีก,โรงแรม'),
+                                            e('p', { className: 'text-[9px] text-slate-500' }, 'คิดสัดส่วน OT 80%')
+                                        ])
+                                    ])
+                                ])
+                            ])
+                        ]),
+
+                        // ตารางบันทึกรายได้และรายการหัก
+                        e('div', { className: 'bg-white p-5 rounded-2xl border border-slate-200 shadow-sm overflow-hidden print-card' }, [
+                            e('div', { className: 'flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-1 border-b border-slate-100 pb-2 print:mb-1 print:pb-1' }, [
+                                e('h2', { className: 'text-base font-bold text-slate-900 flex items-center gap-2' }, [
+                                    e('span', { className: 'text-blue-500 print:hidden' }, '📊'),
+                                    'ประวัติรายได้และรายการหักรายเดือน'
+                                ]),
+                                e('div', { className: 'flex items-center gap-2' }, [
+                                    e('button', {
+                                        onClick: addVarColumn,
+                                        className: 'no-print text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-lg border border-blue-200 transition'
+                                    }, '➕ เพิ่มคอลัมน์'),
+                                    e('span', { className: 'text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full print:bg-transparent print:p-0 print:text-xs' }, 
+                                        slipType === 'double' 
+                                            ? `สลิปคู่: รวม ${monthsCount * 2} ใบ` 
+                                            : `ระยะเวลา: ${monthsCount} เดือนล่าสุด`
+                                    )
+                                ])
+                            ]),
+
+                            e('div', { className: 'overflow-x-auto' }, [
+                                e('table', { className: 'w-full text-left border-collapse text-xs table-fixed' }, [
+                                    e('thead', { className: 'bg-slate-50 text-slate-600 uppercase font-semibold' }, [
+                                        e('tr', null, [
+                                            e('th', { className: 'p-3 border-b text-center w-24' }, 'เดือน'),
+                                            e('th', { className: 'p-3 border-b text-right w-36' }, 'ฐานเงินเดือน'),
+                                            e('th', { className: 'p-3 border-b text-right text-rose-600 w-32' }, 'หักในสลิปหลัก'),
+                                            
+                                            varColumns.map((col, idx) => 
+                                                e('th', { key: `h-col-${col.id}`, className: 'p-2 border-b text-right min-w-[110px] relative group' }, [
+                                                    e('div', { className: 'no-print flex flex-col items-end gap-1 w-full' }, [
+                                                        e('button', {
+                                                            onClick: () => removeVarColumn(col.id),
+                                                            className: 'text-rose-500 hover:text-rose-700 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold p-0.5'
+                                                        }, '✕ ลบ'),
+                                                        e('input', {
+                                                            className: 'w-full text-right bg-transparent font-semibold outline-none border-b border-dotted border-blue-400 text-blue-800 focus:border-solid text-xs',
+                                                            value: col.label,
+                                                            onChange: (event) => {
+                                                                const updated = [...varColumns];
+                                                                updated[idx].label = event.target.value;
+                                                                setVarColumns(updated);
+                                                            }
+                                                        })
+                                                    ]),
+                                                    e('span', { className: 'hidden print:inline font-bold text-slate-800 text-[8px]' }, col.label)
+                                                ])
+                                            )
+                                        ])
+                                    ]),
+                                    e('tbody', { className: 'divide-y divide-slate-100' }, 
+                                        incomeData.map((row, i) => i < activeRowsCount ? e('tr', { key: `income-row-${row.id}`, className: 'hover:bg-slate-50/50' }, [
+                                            e('td', { className: 'p-1.5 border-b' }, 
+                                                e('input', { 
+                                                    disabled: i > 0,
+                                                    className: `w-full py-0.5 text-center font-bold border rounded outline-none text-xs ${
+                                                        i > 0 
+                                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' 
+                                                        : 'bg-white border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800'
+                                                    } print:border-none print:font-bold print:p-0 print:text-[8.5px] print:bg-transparent print:text-slate-800`, 
+                                                    value: row.label, 
+                                                    placeholder: i === 0 ? 'มิ.ย.69' : `${i+1}`,
+                                                    onChange: (e) => { 
+                                                        const n = [...incomeData]; 
+                                                        n[i].label = e.target.value; 
+                                                        setIncomeData(n); 
+                                                        if(i === 0) updateMonths(e.target.value); 
+                                                    }
+                                                })
+                                            ),
+                                            e('td', { className: 'p-1 border-b text-right' }, 
+                                                e(CurrencyInput, { 
+                                                    disabled: (employeeType === 'monthly' && i > 0 && slipType === 'standard'), 
+                                                    value: row.baseSalary, 
+                                                    onChange: (v) => handleInputChange(i, 'baseSalary', v) 
+                                                })
+                                            ),
+                                            e('td', { className: 'p-1 border-b text-right' }, 
+                                                e(CurrencyInput, { 
+                                                    disabled: (employeeType === 'monthly' && i > 0 && slipType === 'standard'), 
+                                                    isRed: true, 
+                                                    value: row.deduction, 
+                                                    onChange: (v) => handleInputChange(i, 'deduction', v) 
+                                                })
+                                            ),
+                                            
+                                            varColumns.map(col => e('td', { key: `cell-${row.id}-${col.id}`, className: 'p-1 border-b text-right' }, 
+                                                e(CurrencyInput, {
+                                                    value: row[col.id] || 0,
+                                                    onChange: (v) => handleInputChange(i, col.id, v)
+                                                })
+                                            ))
+                                        ]) : null)
+                                    )
+                                ])
+                            ]),
+
+                            e('div', { className: 'mt-4 pt-3 border-t border-slate-200 no-print' }, [
+                                e('div', { className: 'flex justify-between items-center bg-slate-50 hover:bg-slate-100/70 p-3 rounded-xl border border-slate-200 transition font-sans' }, [
+                                    e('div', null, [
+                                        e('h3', { className: 'text-xs font-bold text-slate-800 flex items-center gap-1.5' }, [
+                                            e('span', null, '💸'),
+                                            'ระบุรายการหักอื่นๆ และภาษีเพิ่มเติม'
+                                        ]),
+                                        e('p', { className: 'text-[10px] text-slate-500' }, 'เปิดสวิตช์เพื่อใส่รายการปรับปรุงภาษีและยอดหักนอกสลิปเพิ่มเติม')
+                                    ]),
+                                    e('label', { className: 'relative inline-flex items-center cursor-pointer select-none' }, [
+                                        e('input', {
+                                            type: 'checkbox',
+                                            checked: hasExtraDeductions,
+                                            onChange: (e) => setHasExtraDeductions(e.target.checked),
+                                            className: 'sr-only peer'
+                                        }),
+                                        e('div', { className: "w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600" })
+                                    ])
+                                ]),
+                                
+                                hasExtraDeductions && e('div', { className: 'mt-3 p-3 bg-rose-50/20 border border-rose-100 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-200' }, [
+                                    e('div', null, [
+                                        e('div', { className: 'flex justify-between mb-1' }, [
+                                            e('input', {
+                                                className: 'text-rose-700 font-bold bg-transparent border-b border-dotted border-rose-300 w-full outline-none text-[11px] focus:border-solid',
+                                                value: deductionLabel,
+                                                onChange: (e) => setDeductionLabel(e.target.value),
+                                                placeholder: 'ระบุชื่อรายการ เช่น หักสวัสดิการพนักงาน'
+                                            })
+                                        ]),
+                                        e(CurrencyInput, {
+                                            isRed: true,
+                                            value: deductionOther,
+                                            onChange: (v) => setDeductionOther(parseInt(v.replace(/[^0-9]/g, ''), 10) || 0)
+                                        })
+                                    ]),
+                                    e('div', null, [
+                                        e('label', { className: 'block text-[11px] font-bold text-rose-700 mb-1' }, 'ภาษีหักเพิ่มเติม (tax หยอดเอง)'),
+                                        e(CurrencyInput, {
+                                            isRed: true,
+                                            value: taxManual,
+                                            onChange: (v) => setTaxManual(Number(v.replace(/[^0-9.]/g, '')) || 0)
+                                        })
+                                    ])
+                                ])
+                            ]),
+
+                            // --- รายละเอียดวิเคราะห์รายได้เสริมเฉลี่ย (โหมดการพิมพ์แสดงคู่กับข้อมูลเฉลี่ย) ---
+                            e('div', { className: 'hidden print:block print-card bg-white p-3 rounded-xl border border-slate-300 text-[10px] space-y-1.5 mt-4' }, [
+                                e('div', { className: 'font-bold text-slate-800 border-b-2 border-slate-400 pb-1 text-[9.5px]' }, [
+                                    e('span', null, `📋 รายละเอียดวิเคราะห์รายได้เสริมเฉลี่ยและสิทธิ์ความต่อเนื่อง`)
+                                ]),
+                                e('div', { className: 'overflow-x-auto pt-1' }, [
+                                    e('table', { className: 'w-full text-center border-collapse text-[10px] border border-slate-200' }, [
+                                        e('thead', { className: 'bg-slate-100 text-slate-700 font-bold border-b border-slate-200' }, [
+                                            e('tr', null, [
+                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[30%]' }, 'ประเภทรายได้เสริม'),
+                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[35%]' }, 'สถานะความต่อเนื่อง'),
+                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[35%]' }, 'ยอดเฉลี่ยประเมิน')
+                                            ])
+                                        ]),
+                                        e('tbody', { className: 'divide-y divide-slate-100 bg-white' }, 
+                                            varColumns.map(col => {
+                                                const isContinuous = checkVarIncomeContinuity(col.id);
+                                                const avgVal = calculateAdjustedVar(col.id); 
+                                                const rawAvg = isContinuous ? avgVal : 0;
+                                                const isConstant = isConstant3Months(col.id);
+                                                const applied80 = isManufacturing && !isConstant && isContinuous;
+                                                const finalColVal = applied80 ? Math.floor(avgVal * 0.8) : rawAvg;
+
+                                                let statusText = '';
+                                                let statusColor = 'text-slate-600';
+                                                if (!isContinuous) {
+                                                    statusText = '❌ ไม่ต่อเนื่อง (นับเป็น 0)';
+                                                    statusColor = 'text-rose-600 font-bold';
+                                                } else if (customerType === 'welfare') {
+                                                    statusText = '✅ สวัสดิการ (100%)';
+                                                    statusColor = 'text-emerald-700 font-bold';
+                                                } else if (applied80) {
+                                                    statusText = '⚠️ ต่อเนื่องกลุ่มอุตสาหกรรม (80%)';
+                                                    statusColor = 'text-amber-700 font-bold';
+                                                } else {
+                                                    statusText = '✅ ได้ต่อเนื่องทุกเดือน (100%)';
+                                                    statusColor = 'text-emerald-700 font-bold';
+                                                }
+
+                                                return e('tr', { key: `print-detail-row-${col.id}` }, [
+                                                    e('td', { className: 'p-1.5 border border-slate-200 text-center font-bold text-slate-800' }, col.label),
+                                                    e('td', { className: `p-1.5 border border-slate-200 text-center ${statusColor}` }, statusText),
+                                                    e('td', { className: `p-1.5 border border-slate-200 text-center font-bold ${finalColVal > 0 ? 'text-emerald-700' : 'text-slate-400'}` }, 
+                                                        finalColVal > 0 ? `${formatNum(finalColVal)} บาท` : '0 บาท'
+                                                    )
+                                                ]);
+                                            })
+                                        )
+                                    ])
+                                ])
+                            ]),
+
+                            e('div', { className: 'mt-4 pt-3 border-t border-slate-200 bg-slate-50 p-3 rounded-xl flex flex-col gap-3 print:bg-transparent print:border-t-2 print:border-slate-800 print:p-1' }, [
+                                e('div', { className: 'flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2' }, [
+                                    e('div', { className: 'space-y-0.5' }, [
+                                        e('p', { className: 'text-[11px] font-bold text-slate-600 print:text-xs' }, 'ผลวิเคราะห์เงินเดือนสุทธิเฉลี่ยร่วม:'),
+                                        e('p', { className: 'text-sm font-semibold text-slate-900 print:text-xs' }, [
+                                            'เงินเดือนหลักสุทธิเฉลี่ย: ',
+                                            e('span', { className: `font-bold text-base print:text-sm ${customerType === 'retail' && hasSpecialSalaryThreshold ? 'text-blue-600 font-extrabold' : 'text-slate-800'}` }, `${formatNum(netBaseSalary)} บาท`),
+                                            e('span', { className: 'text-slate-400 font-normal text-xs no-print' }, ` (ฐานเฉลี่ย ${formatNum(finalBase)} - หักรวม ${formatNum(totalDeductions)})`)
+                                        ])
+                                    ]),
+                                    
+                                    customerType === 'retail' && (
+                                        hasSpecialSalaryThreshold 
+                                        ? e('div', { className: 'text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 print:bg-transparent print:border-none print:p-0 print:text-emerald-700 print:font-extrabold' }, [
+                                            e('span', null, '🟢'),
+                                            'เกณฑ์สุทธิเกิน 20,000บ. (ผ่าน)'
+                                          ]) 
+                                        : e('div', { className: 'text-xs bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 print:bg-transparent print:border-none print:p-0 print:text-rose-700 print:font-extrabold' }, [
+                                            e('span', null, '🔴'),
+                                            'เกณฑ์สุทธิไม่ถึง 20,000บ.'
+                                          ])
+                                    )
+                                ]),
+
+                                customerType === 'retail' && hasSpecialSalaryThreshold && e('div', { className: 'pt-2.5 border-t border-slate-200/60 animate-in fade-in duration-200 print:border-slate-800' }, [
+                                    e('div', { className: 'flex justify-between items-center mb-2 border-b border-slate-100 pb-1' }, [
+                                        e('h3', { className: 'text-[11px] font-bold text-blue-900 flex items-center gap-1 print:text-xs print:font-extrabold print:text-slate-900' }, [
+                                            e('span', { className: 'print:hidden' }, '⭐'),
+                                            'ประเมินเพิ่มเติมเงื่อนไข "เกณฑ์เงินเดือนสุทธิเกิน 20,000บ."'
+                                        ]),
+                                        e('div', { className: 'flex items-center gap-1.5 no-print' }, [
+                                            e('span', { className: 'text-[10px] text-slate-600 font-bold' }, useSpecialRetail ? 'เปิดใช้สูตรพิเศษ' : 'ปิดใช้สูตรพิเศษ (ใช้ 1/3 ปกติ)'),
+                                            e('label', { className: 'relative inline-flex items-center cursor-pointer select-none' }, [
+                                                e('input', { 
+                                                    type: 'checkbox', 
+                                                    checked: useSpecialRetail, 
+                                                    onChange: (e) => setUseSpecialRetail(e.target.checked),
+                                                    className: 'sr-only peer' 
+                                                }),
+                                                e('div', { className: "w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" })
+                                            ])
+                                        ])
+                                    ]),
+                                    e('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }, [
+                                        e('label', { className: 'flex items-center gap-2 border border-slate-200 p-2 rounded-lg bg-white cursor-pointer hover:bg-blue-50/50 transition select-none print:border-none print:p-0 print:bg-transparent' }, [
+                                            e('input', { 
+                                                type: 'checkbox', 
+                                                checked: isOverOneYear, 
+                                                onChange: (e) => setIsOverOneYear(e.target.checked),
+                                                className: 'w-4 h-4 rounded text-blue-600 focus:ring-blue-500 print:w-3.5 print:h-3.5'
+                                            }),
+                                            e('div', null, [
+                                                e('p', { className: 'text-[11px] font-bold text-slate-700 print:text-xs' }, 'อายุงานรวมเกิน 1 ปี'),
+                                                e('p', { className: 'text-[9px] text-slate-500 print:text-[10px]' }, 'อายุงานปัจจุบันมากกว่า 12 เดือน')
+                                            ])
+                                        ]),
+                                        e('label', { className: 'flex items-center gap-2 border border-slate-200 p-2 rounded-lg bg-white cursor-pointer hover:bg-blue-50/50 transition select-none print:border-none print:p-0 print:bg-transparent' }, [
+                                            e('input', { 
+                                                type: 'checkbox', 
+                                                checked: isStableCompany, 
+                                                onChange: (e) => setIsStableCompany(e.target.checked),
+                                                className: 'w-4 h-4 rounded text-blue-600 focus:ring-blue-500 print:w-3.5 print:h-3.5'
+                                            }),
+                                            e('div', null, [
+                                                e('p', { className: 'text-[11px] font-bold text-slate-700 print:text-xs' }, 'บริษัทจดทะเบียนมั่นคง/มหาชน'),
+                                                e('p', { className: 'text-[9px] text-slate-500 print:text-[10px]' }, 'รัฐวิสาหกิจ หรือ บจ.มหาชน')
+                                            ])
+                                        ])
+                                    ])
+                                ])
+                            ])
+                        ])
+                    ]),
+
+                    // ฝั่งขวา: รายงาน ผลการวิเคราะห์รายได้สุทธิ และประเมินความสามารถการผ่อนชำระ
+                    e('div', { className: 'space-y-4 print:space-y-1.5' }, [
+                        
+                        e('div', { className: 'bg-white p-5 rounded-2xl border border-blue-200 shadow-md bg-gradient-to-b from-blue-50/10 to-white print-card' }, [
+                            e('h2', { className: 'text-base font-bold text-slate-900 mb-3 pb-1 border-b border-slate-100 flex items-center gap-2 print:border-b-2 print:border-slate-800' }, [
+                                e('span', { className: 'text-blue-600 print:hidden' }, '💎'),
+                                'ผลการวิเคราะห์รายได้เฉลี่ยสุทธิ'
+                            ]),
+
+                            e('div', { className: 'space-y-3 print:space-y-1.5 text-xs' }, [
+                                e('div', { className: 'flex justify-between items-center pb-1 border-b border-slate-100 bg-slate-100/40 p-1.5 rounded-lg' }, [
+                                    e('span', { className: 'text-slate-855 font-extrabold text-sm md:text-base print:text-[13px] print:font-black' }, 'เงินเดือน (ฐานหลักเฉลี่ย):'),
+                                    e('span', { className: 'font-black text-blue-900 text-base md:text-lg print:text-[14px] print:font-black' }, `${formatNum(finalBase)} บาท`)
+                                ]),
+
+                                e('div', { className: 'bg-rose-50/10 p-2 rounded-xl border border-rose-100 space-y-1' }, [
+                                    e('p', { className: 'text-[9.5px] font-bold text-rose-800 border-b border-rose-200/50 pb-0.5 print:text-[9px]' }, '📉 รายการหักรายได้หลัก & ภาษี'),
+                                    e('div', { className: 'flex justify-between text-[11px] print:text-[9.5px]' }, [
+                                        e('span', { className: 'text-slate-500 font-medium print:text-[9.5px]' }, '• รายการหักเฉลี่ยในสลิปหลัก:'),
+                                        e('span', { className: 'font-bold text-rose-600 print:text-[10.5px] print:font-extrabold' }, `-${formatNum(finalDeduction)} บาท`)
+                                    ]),
+                                    hasExtraDeductions && activeTaxManual > 0 && e('div', { className: 'flex justify-between text-[11px] print:text-[9.5px] animate-in fade-in duration-150' }, [
+                                        e('span', { className: 'text-slate-500 font-medium print:text-[9.5px]' }, '• ภาษีหักเพิ่มเติม (tax หยอดเอง):'),
+                                        e('span', { className: 'font-bold text-rose-600 print:text-[10.5px] print:font-extrabold' }, `-${formatNum(activeTaxManual)} บาท`)
+                                    ])
+                                ]),
+
+                                e('div', { className: 'flex justify-between items-center py-1 border-b border-slate-100 bg-slate-50/50 px-1.5 rounded print:text-xs print:bg-transparent print:p-0' }, [
+                                    e('div', { className: 'flex flex-col' }, [
+                                        e('span', { className: 'text-slate-700 font-bold text-[11px] print:text-[11.5px] print:font-extrabold' }, 'เงินเดือนสุทธิ:'),
+                                        e('span', { className: 'text-[9px] text-slate-400 leading-none print:hidden' }, '(หักสลิปและภาษี)')
+                                    ]),
+                                    e('span', { className: 'font-bold text-slate-800 text-sm print:text-[12.5px] print:font-bold' }, `${formatNum(netSalaryOnly)} บาท`)
+                                ]),
+
+                                e('div', { className: 'flex justify-between items-center pb-1 border-b border-slate-100 print:text-xs' }, [
+                                    e('div', { className: 'flex flex-col' }, [
+                                        e('span', { className: 'text-slate-500 font-medium flex items-center gap-1 print:text-slate-800 print:text-[11.5px] print:font-extrabold' }, [
+                                            'รายได้เสริมเฉลี่ยรวม:',
+                                            isManufacturing && customerType !== 'welfare' && e('span', { className: 'text-[8.5px] bg-amber-100 text-amber-800 px-1 rounded-sm font-bold print:hidden' }, 'คิด 80%'),
+                                            customerType === 'welfare' && e('span', { className: 'text-[8.5px] bg-blue-100 text-blue-800 px-1 rounded-sm font-bold font-mono print:hidden' }, 'สวัสดิการ')
+                                        ])
+                                    ]),
+                                    e('span', { className: 'font-bold text-emerald-600 text-sm print:text-[12.5px] print:font-bold print:text-emerald-700' }, `+${formatNum(totalVar)} บาท`)
+                                ]),
+
+                                e('div', { className: 'flex justify-between items-center p-2 rounded-lg bg-blue-50/30 border border-blue-100/40 print:border-none print:p-0 print:bg-transparent font-sans' }, [
+                                    e('div', { className: 'flex flex-col' }, [
+                                        e('span', { className: 'text-blue-900 font-bold text-[11px] print:text-slate-900 print:text-[11.5px] print:font-extrabold' }, 'รายได้รวมสุทธิเฉลี่ย:'),
+                                        e('span', { className: 'text-[9px] text-blue-600/80 leading-none print:hidden' }, '(รวมฐานเงินเดือนสุทธิ + รายได้เสริม)')
+                                    ]),
+                                    e('span', { className: 'font-extrabold text-blue-700 text-sm print:text-[12.5px] print:font-bold print:text-blue-900 font-sans' }, `${formatNum(netTotalWithOther)} บาท`)
+                                ]),
+
+                                // รายละเอียดรายได้เสริมเฉลี่ยบนบอร์ดแสดงผล (จะถูกซ่อนไว้เมื่อสั่งพิมพ์)
+                                e('div', { className: 'bg-slate-50 p-3 rounded-xl border border-slate-200 text-[10px] space-y-2 print:hidden' }, [
+                                    e('div', { className: 'pb-1 border-b border-slate-200/70 flex justify-between items-center' }, [
+                                        e('span', { className: 'font-bold text-slate-600 flex items-center gap-1.5' }, [
+                                            e('span', null, '📋'),
+                                            'สิทธิ์รายได้อื่นและการได้รับต่อเนื่อง'
+                                        ]),
+                                        e('button', {
+                                            onClick: () => setShowVarDetails(!showVarDetails),
+                                            className: `px-1.5 py-0.5 rounded text-[9px] font-extrabold transition-all outline-none ${showVarDetails ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`
+                                        }, showVarDetails ? 'ซ่อน' : 'แสดง')
+                                    ]),
+
+                                    showVarDetails && e('div', { className: 'overflow-x-auto pt-1' }, [
+                                        e('table', { className: 'w-full text-center border-collapse text-[10px] border border-slate-200' }, [
+                                            e('thead', { className: 'bg-slate-100 text-slate-700 font-bold border-b border-slate-200' }, [
+                                                e('tr', null, [
+                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[30%]' }, 'รายการอื่น'),
+                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[40%]' }, 'ความต่อเนื่องในสลิป'),
+                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[30%]' }, 'เฉลี่ยคิดให้')
+                                                ])
+                                            ]),
+                                            e('tbody', { className: 'divide-y divide-slate-100 bg-white font-sans' }, 
+                                                varColumns.map(col => {
+                                                    const isContinuous = checkVarIncomeContinuity(col.id);
+                                                    const avgVal = calculateAdjustedVar(col.id); 
+                                                    const isConstant = isConstant3Months(col.id);
+                                                    const applied80 = isManufacturing && !isConstant && isContinuous;
+                                                    const finalColVal = applied80 ? Math.floor(avgVal * 0.8) : avgVal;
+
+                                                    let badgeNode = null;
+                                                    if (!isContinuous) {
+                                                        badgeNode = e('span', { className: 'text-rose-600 font-bold bg-rose-50 border border-rose-100 px-1 py-0.5 rounded text-[9px]' }, '❌ ไม่ต่อเนื่อง (เป็น 0)');
+                                                    } else if (applied80) {
+                                                        badgeNode = e('span', { className: 'text-amber-700 font-bold bg-amber-50 border border-amber-100 px-1 py-0.5 rounded text-[9px]' }, '⚠️ ต่อเนื่อง (คิด 80%)');
+                                                    } else {
+                                                        badgeNode = e('span', { className: 'text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded text-[9px]' }, '✅ ต่อเนื่อง (เฉลี่ย 100%)');
+                                                    }
+
+                                                    return e('tr', { key: `detail-row-${col.id}` }, [
+                                                        e('td', { className: 'p-1.5 border border-slate-200 text-center font-bold text-slate-800' }, col.label),
+                                                        e('td', { className: 'p-1.5 border border-slate-200 text-center' }, badgeNode),
+                                                        e('td', { className: `p-1.5 border border-slate-200 text-center font-bold ${finalColVal > 0 ? 'text-emerald-700' : 'text-slate-400'}` }, 
+                                                            finalColVal > 0 ? `${formatNum(finalColVal)} บาท` : '0 บาท'
+                                                        )
+                                                    ]);
+                                                })
+                                            )
+                                        ])
+                                    ])
+                                ]),
+
+                                e('div', { className: 'bg-rose-50/20 p-2.5 rounded-xl border border-rose-200 space-y-2 font-sans' }, [
+                                    e('p', { className: 'text-[9.5px] font-bold text-rose-800 border-b border-rose-200 pb-0.5 flex justify-between' }, [
+                                        e('span', null, '📋 รายการหักบูโร & หักอื่นๆ'),
+                                        e('span', { className: 'text-[8px] text-rose-500 font-normal no-print' }, '*แก้ไขหนี้บูโรได้โดยตรง')
+                                    ]),
+
+                                    e('div', { className: 'flex items-center justify-between text-rose-600 font-bold gap-2 w-full' }, [
+                                        e('span', { className: 'text-[11px] whitespace-nowrap shrink-0' }, 'หักหนี้บูโร / ภาระภายนอก:'),
+                                        e(CurrencyInput, {
+                                            isRed: true,
+                                            value: debtBurden,
+                                            containerClass: 'w-24 text-right shrink-0',
+                                            className: 'text-xs py-0.5 px-1 bg-white border border-rose-200 rounded focus:ring-rose-500 text-rose-600 font-bold',
+                                            onChange: (v) => setDebtBurden(Number(v.replace(/[^0-9.]/g, '')) || 0)
+                                        })
+                                    ]),
+
+                                    e('div', { className: 'flex items-center justify-between text-rose-600 font-bold pt-1 border-t border-rose-100/60 gap-2 w-full' }, [
+                                        e('span', { className: 'text-[11px] whitespace-nowrap shrink-0' }, `${deductionLabel || 'หักอื่นๆ'}:`),
+                                        e(CurrencyInput, {
+                                            disabled: true,
+                                            isRed: true,
+                                            value: activeDeductionOther,
+                                            containerClass: 'w-24 text-right shrink-0',
+                                            className: 'text-xs py-0.5 px-1 bg-slate-100 text-rose-600 font-bold cursor-not-allowed border-none'
+                                        })
+                                    ]),
+
+                                    e('div', { className: 'flex justify-between items-center text-[10px] text-rose-700 font-extrabold pt-1.5 border-t border-rose-200 print:text-[10px]' }, [
+                                        e('span', { className: 'print:font-bold' }, 'รวมยอดหักบูโร & หักอื่นๆ:'),
+                                        e('span', { className: 'text-rose-600 font-black text-sm print:text-[11px] print:font-black font-sans' }, `-${formatNum(activeDebtBurden + activeDeductionOther)} บาท`)
+                                    ])
+                                ]),
+
+                                e('div', { className: 'border-t border-slate-200 pt-2 print:border-slate-800' }, [
+                                    e('div', { className: 'p-3 bg-blue-600 text-white rounded-xl text-center shadow-sm print-clear-card font-sans' }, [
+                                        e('div', { className: 'flex flex-col items-center justify-center' }, [
+                                            e('p', { className: 'text-[9.5px] uppercase tracking-wider opacity-90 font-bold' }, 'รายได้สุทธิร่วมเฉลี่ย (Net Income):'),
+                                            e('span', { className: 'text-[8px] opacity-75 print:text-[8px] no-print font-sans' }, '= รายได้รวมทั้งหมด - รายการหักทั้งหมด')
+                                        ]),
+                                        e('p', { className: 'text-xl md:text-2xl font-black mt-0.5 font-sans' }, `${formatNum(netIncome)} บาท`)
+                                    ])
+                                ])
+                            ])
+                        ]),
+
+                        // ส่วนการประเมินความสามารถในการผ่อนชำระ
+                        e('div', { className: 'bg-white p-5 rounded-2xl border border-slate-200 shadow-sm print-card' }, [
+                            e('h2', { className: 'text-base font-bold text-slate-900 mb-3 pb-1 border-b border-slate-100 flex items-center gap-2 print:border-b-2 print:border-slate-800' }, [
+                                e('span', { className: 'text-emerald-500 print:hidden' }, '🎯'),
+                                'ประเมินความสามารถการผ่อนชำระ'
+                            ]),
+
+                            e('div', { className: 'space-y-3' }, [
+                                customerType === 'welfare' ? e('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-3' }, [
+                                    e('div', { className: 'p-3 bg-emerald-50/60 rounded-xl border border-emerald-200 text-left print-capacity-box-welfare flex flex-col justify-between font-sans' }, [
+                                        e('div', null, [
+                                            e('div', { className: 'flex justify-between items-center mb-1.5 border-b border-emerald-100 pb-1' }, [
+                                                e('span', { className: 'text-xs font-bold text-emerald-900' }, '🟢 เกณฑ์สวัสดิการสิทธิ์หลัก'),
+                                                e('select', { 
+                                                    className: 'border border-emerald-300 rounded text-[10px] px-1 py-0.5 bg-white font-bold text-emerald-800 outline-none no-print cursor-pointer', 
+                                                    value: welfarePercent, 
+                                                    onChange: (e) => setWelfarePercent(Number(e.target.value)) 
+                                                }, [
+                                                    e('option', { value: 0.8 }, '80% ของเงินได้'),
+                                                    e('option', { value: 0.7 }, '70% ของเงินได้')
+                                                ])
+                                            ]),
+                                            e('div', { className: 'text-[9.5px] text-slate-600 mb-2 space-y-0.5 font-sans' }, [
+                                                e('p', null, `• เงินได้หลักสุทธิ: ${formatNum(netBaseSalary)} บาท`),
+                                                e('p', null, `• สัดส่วนที่คำนวณ: ${(welfarePercent * 100)}%`)
+                                            ])
+                                        ]),
+                                        e('div', null, [
+                                            e('span', { className: 'text-lg font-black text-emerald-700 block text-center mt-1 print-capacity-value-welfare font-sans' }, `${formatNum(welfareCapacity)} บาท/เดือน`),
+                                            e('p', { className: 'text-[8.5px] text-slate-400 text-center mt-1 font-sans' }, `* ประเมินจากฐานรายได้หลัก (ปัดเศษลง)`)
+                                        ])
+                                    ]),
+                                    
+                                    e('div', { className: 'p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 text-left print-capacity-box-retail flex flex-col justify-between font-sans' }, [
+                                        e('div', null, [
+                                            e('div', { className: 'flex justify-between items-center mb-1.5 border-b border-indigo-100 pb-1' }, [
+                                                e('span', { className: 'text-xs font-bold text-indigo-900' }, '🔮 เกณฑ์รายได้อื่น'),
+                                                e('select', { 
+                                                    className: 'border border-indigo-300 rounded text-[10px] px-1 py-0.5 bg-white font-bold text-indigo-800 outline-none no-print cursor-pointer', 
+                                                    value: retailFraction, 
+                                                    onChange: (e) => setRetailFraction(Number(e.target.value)) 
+                                                }, [
+                                                    e('option', { value: 0.3333 }, 'สัดส่วน 1/3 (33%)'),
+                                                    e('option', { value: 0.5 }, 'สัดส่วน 1/2 (50%)')
+                                                ])
+                                            ]),
+                                            e('div', { className: 'text-[9.5px] text-slate-600 mb-2 space-y-0.5 font-sans' }, [
+                                                e('p', null, `• รายได้อื่นเฉลี่ย: ${formatNum(totalVar)} บาท`),
+                                                e('p', null, `• สัดส่วนที่คำนวณ: ${retailFraction === 0.5 ? '1/2 (50%)' : '1/3 (33%)'}`)
+                                            ])
+                                        ]),
+                                        e('div', null, [
+                                            e('span', { className: 'text-lg font-black text-indigo-700 block text-center mt-1 print-capacity-value-retail font-sans' }, `${formatNum(retailCapacity)} บาท/เดือน`),
+                                            e('p', { className: 'text-[8.5px] text-slate-400 text-center mt-1 font-sans' }, `* ประเมินแยกจากรายเสริม (ปัดเศษลง)`)
+                                        ])
+                                    ])
+                                ]) : e('div', { className: 'space-y-3' }, [
+                                    isSpecialRetailEligible ? e('div', { className: 'p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-left print-capacity-box space-y-2' }, [
+                                        e('div', { className: 'border-b border-emerald-200 pb-1.5 flex justify-between items-center font-sans' }, [
+                                            e('h3', { className: 'text-xs font-black text-emerald-900 uppercase font-bold' }, '⭐ เกณฑ์เงินเดือนสุทธิเกิน 20,000บ. (ผ่านสิทธิ์พิเศษ)'),
+                                            e('div', { className: 'flex items-center gap-1.5 no-print' }, [
+                                                e('span', { className: 'text-[10px] text-slate-600 font-bold' }, useSpecialRetail ? 'เปิดใช้งาน' : 'ปิดใช้งาน'),
+                                                e('label', { className: 'relative inline-flex items-center cursor-pointer select-none' }, [
+                                                    e('input', { 
+                                                        type: 'checkbox', 
+                                                        checked: useSpecialRetail, 
+                                                        onChange: (e) => setUseSpecialRetail(e.checked),
+                                                        className: 'sr-only peer' 
+                                                    }),
+                                                    e('div', { className: "w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" })
+                                                ])
+                                            ])
+                                        ]),
+                                        useSpecialRetail ? e('div', { className: 'text-[11px] text-slate-700 space-y-1 font-sans' }, [
+                                            e('p', { className: 'font-bold text-emerald-900 border-b border-emerald-100 pb-0.5' }, '🎉 ผ่านเงื่อนไขพิจารณาสามมิติครบถ้วน:'),
+                                            e('ul', { className: 'list-disc pl-4 text-[10px] text-slate-600 space-y-0.5' }, [
+                                                e('li', null, `เงินเดือนหลักสุทธิเฉลี่ย: ${formatNum(netBaseSalary)} บาท (เกินเพดาน 20,000 บ.)`),
+                                                e('li', null, `อายุงานปัจจุบันมากกว่า 12 เดือน (ผ่าน)`),
+                                                e('li', null, `สถานภาพองค์กรจดทะเบียนมั่นคงหรือ บจ.มหาชน (ผ่าน)`)
+                                            ]),
+                                            
+                                            e('p', { className: 'font-semibold text-slate-800 mt-2 border-t border-emerald-200/50 pt-1.5 font-sans' }, 'สูตรคำนวณเกณฑ์รายได้แบบพิเศษ:'),
+                                            e('div', { className: 'pl-2 text-[10.5px] bg-white/65 p-2 rounded-lg border border-emerald-200/40 space-y-1 print:bg-transparent print:border-slate-300 font-sans' }, [
+                                                e('p', { className: 'flex justify-between' }, [
+                                                    e('span', null, '1) ฐานเงินเดือนหลักสุทธิ / 2:'),
+                                                    e('span', { className: 'font-bold' }, `${formatNum(Math.floor(netBaseSalary / 2))} บาท`)
+                                                ]),
+                                                e('p', { className: 'flex justify-between' }, [
+                                                    e('span', null, '2) ฐานรายเสริมเฉลี่ย / 3:'),
+                                                    e('span', { className: 'font-bold' }, `${formatNum(Math.floor(totalVar / 3))} บาท`)
+                                                ])
+                                            ])
+                                        ]) : e('div', { className: 'text-[11px] text-slate-500 space-y-1' }, [
+                                            e('p', { className: 'font-semibold text-amber-700' }, '⚠️ เลือกไม่เปิดใช้งานเกณฑ์รายได้แบบพิเศษ'),
+                                            e('p', null, 'ระบบคำนวณตามเกณฑ์สัดส่วน 1/3 ปกติให้โดยอัตโนมัติ')
+                                        ]),
+                                        e('span', { className: 'text-2xl font-black text-emerald-700 block text-center print-capacity-value font-sans' }, `${formatNum(retailCapacity)} บาท/เดือน`),
+                                        e('p', { className: 'text-[9.5px] text-slate-500 text-center print-capacity-desc font-sans' }, `* ประเมินจากเกณฑ์ร่วมสิทธิ์พิเศษเพิ่มวงเงินกู้สูงสุด`)
+                                    ]) : e('div', { className: 'p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-left print-capacity-box space-y-2 font-sans' }, [
+                                        e('div', { className: 'flex justify-between items-center mb-1 border-b border-emerald-200 pb-1' }, [
+                                            e('span', { className: 'text-xs font-bold text-emerald-900' }, '📋 เกณฑ์ความสามารถทั่วไป (รายย่อยทั่วไป)'),
+                                            e('select', { 
+                                                className: 'border border-emerald-300 rounded text-xs px-1.5 py-0.5 bg-white font-bold text-emerald-800 outline-none no-print cursor-pointer', 
+                                                value: retailFraction, 
+                                                onChange: (e) => setRetailFraction(Number(e.target.value)) 
+                                            }, [
+                                                e('option', { value: 0.3333 }, 'สัดส่วนกู้ปกติ 1/3 (33.33%)'),
+                                                e('option', { value: 0.5 }, 'สัดส่วนกู้พิเศษ 1/2 (50%)')
+                                            ])
+                                        ]),
+                                        e('div', { className: 'text-[10px] text-slate-600 mb-1 space-y-0.5 print:text-[10px] font-sans' }, [
+                                            e('p', null, `• ยอดรายได้เฉลี่ยสุทธิร่วมสะสม (Net Income): ${formatNum(netIncome)} บาท`),
+                                            e('p', null, `• อัตราคิดคำนวณตามเงื่อนไข: ${retailFraction === 0.5 ? '50%' : '33.33%'} ของยอดรายได้สุทธิ`),
+                                            e('p', { className: 'text-[9px] text-rose-500 italic mt-1 font-semibold font-sans' }, 
+                                                `* ฐานรายได้หลักสุทธิปัจจุบันของคุณ (${formatNum(netBaseSalary)} บ.) ต่ำกว่าสิทธิ์พิเศษ 20,000บ. จึงประเมินเกณฑ์ปกติ`
+                                            )
+                                        ]),
+                                        e('span', { className: 'text-3xl font-black text-emerald-700 block text-center mt-1 print-capacity-value font-sans' }, `${formatNum(retailCapacity)} บาท/เดือน`)
+                                    ])
+                                ])
+                            ])
+                        ])
+                    ])
+                ]),
+
+                // --- ตรวจสอบรายได้สะสมในสลิป YTD ---
+                e('div', { className: 'mt-6 bg-white p-6 rounded-2xl border border-indigo-200 shadow-sm overflow-hidden no-print' }, [
+                    e('div', { className: 'flex flex-col sm:flex-row justify-between items-start sm:items-center bg-indigo-50/40 p-4 rounded-xl border border-indigo-100 transition gap-3' }, [
+                        e('div', null, [
+                            e('h3', { className: 'text-sm font-bold text-indigo-900 flex items-center gap-1.5' }, [
+                                e('span', null, '🔍'),
+                                'ตรวจสอบความสัมพันธ์ของยอดรายได้สะสมในสลิป (YTD Audit) - ปีต่อปี'
+                            ]),
+                            e('p', { className: 'text-xs text-slate-500 mt-0.5' }, 'เปรียบเทียบยอดสะสมระหว่างเดือนตามสูตรเพื่อตรวจสอบสลิปอย่างละเอียด ช่วยลดความกังวลเรื่องเอกสารปลอมแปลง')
+                        ]),
+                        e('div', { className: 'flex items-center gap-3' }, [
+                            e('span', { className: 'text-xs font-bold text-slate-600' }, showYtdAudit ? 'เปิดแผงตรวจสอบ YTD' : 'ปิดแผงตรวจสอบ YTD'),
+                            e('label', { className: 'relative inline-flex items-center cursor-pointer select-none' }, [
+                                e('input', {
+                                    type: 'checkbox',
+                                    checked: showYtdAudit,
+                                    onChange: (e) => setShowYtdAudit(e.target.checked),
+                                    className: 'sr-only peer'
+                                }),
+                                e('div', { className: "w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-indigo-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" })
+                            ])
+                        ])
+                    ]),
+
+                    showYtdAudit && e('div', { className: 'mt-4 space-y-4 animate-in slide-in-from-top-3 duration-300' }, [
+                        
+                        e('div', { className: 'flex flex-wrap gap-2 mb-2 no-print' }, [
+                            e('button', {
+                                onClick: pullGrossFromSlip,
+                                className: 'px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm'
+                            }, [
+                                e('span', null, '📥'),
+                                'ดึงข้อมูลรายรับรวมจากสลิป'
+                            ]),
+                            e('button', {
+                                onClick: clearYtdData,
+                                className: 'px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm'
+                            }, [
+                                e('span', null, '🗑️'),
+                                'เคลียร์ข้อมูล YTD เป็น 0'
+                            ])
+                        ]),
+
+                        e('div', { className: 'p-4 bg-indigo-50/20 rounded-xl border border-indigo-100 text-xs text-indigo-950 font-semibold' }, [
+                            e('p', { className: 'font-bold text-indigo-900 flex items-center gap-1 mb-2.5' }, [
+                                e('span', null, '⚡'),
+                                'แนวทางการใช้ระบบสะสม YTD'
+                            ]),
+                            e('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4 font-normal text-slate-600' }, [
+                                e('div', { className: 'flex gap-2' }, [
+                                    e('span', { className: 'font-bold text-indigo-700 bg-indigo-100 rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px]' }, '1'),
+                                    e('p', null, 'เริ่มต้นระบบด้วยยอด 0 ทั้งหมด หากต้องการคีย์ข้อมูลแบบเป็นส่วนตัว')
+                                ]),
+                                e('div', { className: 'flex gap-2' }, [
+                                    e('span', { className: 'font-bold text-indigo-700 bg-indigo-100 rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px]' }, '2'),
+                                    e('p', null, 'กรอกยอดสะสมจริงบนสลิปของเดือนแถวล่างสุดเพื่อกำหนดตัวเลขสะสมเริ่มต้น')
+                                ]),
+                                e('div', { className: 'flex gap-2' }, [
+                                    e('span', { className: 'font-bold text-indigo-700 bg-indigo-100 rounded-full w-5 h-5 flex items-center justify-center shrink-0 text-[10px]' }, '3'),
+                                    e('p', null, 'สามารถกดปุ่ม "ดึงข้อมูลรายรับรวมจากสลิป" เพื่อดึงข้อมูลรายได้จากตารางด้านบนมารวมคำนวณตรวจสอบอัตโนมัติ')
+                                ])
+                            ])
+                        ]),
+
+                        // ตารางประเมิน YTD
+                        e('div', { className: 'border border-indigo-100 rounded-xl overflow-hidden bg-white shadow-sm' }, [
+                            e('table', { className: 'w-full text-left border-collapse text-xs table-fixed min-w-full' }, [
+                                e('thead', { className: 'bg-indigo-50/80 text-indigo-900 font-bold border-b border-indigo-100' }, [
+                                    e('tr', null, [
+                                        e('th', { className: 'p-3 text-center w-[15%]' }, 'รอบสลิป'),
+                                        e('th', { className: 'p-3 text-right w-[18%]' }, 'รายรับรวมสลิป'),
+                                        e('th', { className: 'p-3 text-right text-rose-700 w-[18%]' }, 'หักไม่สะสม YTD'),
+                                        e('th', { className: 'p-3 text-right text-indigo-800 w-[21%]' }, 'ยอดสะสมจริงบนสลิป'),
+                                        e('th', { className: 'p-3 text-right w-[18%]' }, 'สะสมคำนวณ'),
+                                        e('th', { className: 'p-3 text-center w-[10%]' }, 'ผลลัพธ์')
+                                    ])
+                                ]),
+                                e('tbody', { className: 'divide-y divide-indigo-50 font-sans' }, 
+                                    incomeData.slice(0, activeRowsCount).map((row, idx) => {
+                                        const chronoIdx = activeRowsCount - 1 - idx; 
+                                        const savedState = ytdData[row.id] || {};
+                                        const grossValue = savedState.gross !== undefined && savedState.gross !== null ? savedState.gross : 0;
+                                        const actualYtd = savedState.actualYtd || 0;
+                                        const ytdDeduct = savedState.ytdDeduction || 0; 
+                                        const calculatedYtd = calculatedYtdObj[row.id] || 0;
+
+                                        let statusNode = null;
+                                        let isBaseMonth = (chronoIdx === 0); 
+                                        let isResetMonth = isJanuary(row.label) && !isBaseMonth; 
+
+                                        if (isBaseMonth) {
+                                            statusNode = e('span', { className: 'text-slate-600 font-bold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-[10px] whitespace-nowrap' }, '🏁 ยอดเริ่ม');
+                                        } else {
+                                            const diff = Math.abs(calculatedYtd - actualYtd);
+                                            if (diff < 0.011) {
+                                                statusNode = e('span', { className: 'text-emerald-700 font-extrabold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px] whitespace-nowrap' }, '🟢 ตรงกัน');
+                                            } else {
+                                                const displayDiff = calculatedYtd - actualYtd;
+                                                statusNode = e('span', { className: 'text-rose-700 font-extrabold bg-rose-50 px-2 py-0.5 rounded border border-rose-100 flex flex-row items-center justify-center gap-1 leading-tight text-[10px] whitespace-nowrap font-sans' }, [
+                                                    e('span', null, '🔴 ต่าง'),
+                                                    e('span', { className: 'font-bold text-rose-800' }, `${formatNum(Math.abs(displayDiff))} บ.`)
+                                                ]);
+                                            }
+                                        }
+
+                                        return e('tr', { key: `ytd-row-${row.id}`, className: isBaseMonth ? 'bg-amber-50/20' : (isResetMonth ? 'bg-blue-50/20' : 'hover:bg-indigo-50/5') }, [
+                                            e('td', { className: 'p-2.5 text-center font-bold text-slate-700 font-sans' }, [
+                                                row.label || `${activeRowsCount - idx}`,
+                                                isBaseMonth && e('span', { className: 'block text-[8px] text-amber-600 font-semibold mt-0.5' }, '(จุดตั้งต้น)'),
+                                                isResetMonth && e('span', { className: 'block text-[8px] text-blue-600 font-semibold mt-0.5' }, '(ปีภาษีใหม่)')
+                                            ]),
+                                            e('td', { className: 'p-1 text-right font-sans' }, 
+                                                e(CurrencyInput, {
+                                                    value: grossValue,
+                                                    placeholder: "0.00",
+                                                    onChange: (v) => handleYtdValueChange(row.id, 'gross', v),
+                                                    className: 'text-xs text-slate-700 font-medium py-1 px-1 bg-transparent border-none',
+                                                    allowDecimal: true
+                                                })
+                                            ),
+                                            e('td', { className: 'p-1 text-right font-sans' }, 
+                                                e(CurrencyInput, {
+                                                    value: ytdDeduct,
+                                                    placeholder: "0.00",
+                                                    onChange: (v) => handleYtdValueChange(row.id, 'ytdDeduction', v),
+                                                    className: 'text-xs text-rose-600 font-bold py-1 px-1 bg-transparent border-none',
+                                                    allowDecimal: true
+                                                })
+                                            ),
+                                            e('td', { className: `p-1 text-right ${isBaseMonth ? 'bg-amber-50/30' : ''} font-sans` }, 
+                                                e(CurrencyInput, {
+                                                    value: actualYtd,
+                                                    placeholder: "0.00",
+                                                    onChange: (v) => handleYtdValueChange(row.id, 'actualYtd', v),
+                                                    className: `text-xs font-bold py-1 px-1 bg-transparent border-none ${isBaseMonth ? 'text-amber-800 font-black' : 'text-indigo-900 font-black'}`,
+                                                    allowDecimal: true
+                                                })
+                                            ),
+                                            e('td', { className: 'p-2.5 text-right font-black text-slate-900 text-xs pr-3 font-sans' }, 
+                                                formatDecimal(calculatedYtd)
+                                            ),
+                                            e('td', { className: 'p-2.5 text-center font-sans' }, statusNode)
+                                        ]);
+                                    })
+                                )
+                            ])
+                        ])
+                    ])
+                ]),
+
+                e('div', { key: 'action-and-history-section', className: 'mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 no-print font-sans' }, [
+                    e('div', { className: 'lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3' }, [
+                        e('button', { 
+                            onClick: saveToHistory,
+                            className: 'py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5' 
+                        }, '💾 บันทึกเก็บประวัติผู้ใช้'),
+                        e('button', { 
+                            onClick: () => window.print(), 
+                            className: 'w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow flex items-center justify-center gap-1.5' 
+                        }, '🖨️ พิมพ์รายงานเสนออนุมัติ')
+                    ]),
+
+                    e('div', { className: 'lg:col-span-1' }, [
+                        e('div', { key: 'history-section', className: 'bg-white p-5 rounded-2xl border border-slate-200 shadow-sm' }, [
+                            e('h2', { className: 'text-xs font-bold text-slate-900 mb-2 pb-1 border-b border-slate-100 flex items-center justify-between font-sans' }, [
+                                e('span', { className: 'flex items-center gap-1.5 font-bold' }, [
+                                    e('span', null, '📜'),
+                                    'ประวัติการคำนวณล่าสุด'
+                                ]),
+                                history.length > 0 && e('button', { 
+                                    onClick: () => {
+                                        triggerConfirm('คุณต้องการล้างประวัติการคำนวณทั้งหมดใช่หรือไม่?', () => {
+                                            setHistory([]);
+                                            localStorage.removeItem('loan_calc_history');
+                                        });
+                                    },
+                                    className: 'text-[10px] text-rose-500 hover:underline font-semibold font-sans' 
+                                }, 'ลบทั้งหมด')
+                            ]),
+
+                            // แสดงนโยบายการจัดเก็บข้อมูล 90 วัน
+                            e('div', { className: 'bg-slate-50 border border-slate-100 rounded-lg p-2 mb-3 flex items-center justify-between text-[10px] text-slate-500 font-medium' }, [
+                                e('span', null, '⏰ นโยบายการเก็บข้อมูล:'),
+                                e('span', { className: 'bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold' }, 'ลบอัตโนมัติเมื่อเกิน 90 วัน')
+                            ]),
+
+                            // ช่องค้นหาข้อมูลประวัติ (Search Box)
+                            history.length > 0 && e('div', { className: 'relative mb-3' }, [
+                                e('input', {
+                                    type: 'text',
+                                    placeholder: '🔍 ค้นหาชื่อลูกค้า หรือบริษัท...',
+                                    value: historySearchTerm,
+                                    onChange: (e) => setHistorySearchTerm(e.target.value),
+                                    className: 'w-full px-3 py-1.5 pl-8 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium'
+                                }),
+                                historySearchTerm && e('button', {
+                                    onClick: () => setHistorySearchTerm(''),
+                                    className: 'absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold'
+                                }, '✕')
+                            ]),
+
+                            history.length === 0 ? e('p', { className: 'text-slate-400 text-center py-6 text-xs' }, 'ยังไม่มีประวัติการคำนวณ') : (
+                                filteredHistory.length === 0 ? e('p', { className: 'text-slate-400 text-center py-6 text-xs font-medium' }, '🔍 ไม่พบชื่อลูกค้าที่ตรงกับคำค้นหา') : (
+                                    e('div', { className: 'space-y-1.5 max-h-56 overflow-y-auto pr-1' }, 
+                                        filteredHistory.map((item) => e('div', { 
+                                            key: item.id, 
+                                            className: 'p-1.5 bg-slate-50 hover:bg-blue-50/60 rounded-lg text-xs flex justify-between items-center transition cursor-pointer border border-slate-100 font-sans', 
+                                            onClick: () => loadHistoryItem(item) 
+                                        }, [
+                                            e('div', { className: 'space-y-0.5 max-w-[60%]' }, [
+                                                e('p', { className: 'font-bold text-slate-800 font-sans truncate' }, item.customerName),
+                                                e('p', { className: 'text-[9.5px] text-slate-400 font-sans truncate' }, `${item.companyName || 'ไม่ระบุที่ทำงาน'}`),
+                                                e('p', { className: 'text-[8.5px] text-slate-400 font-sans' }, `${item.customerType === 'welfare' ? 'สวัสดิการ (3ด.)' : 'รายย่อย'} · ${item.date}`)
+                                            ]),
+                                            e('div', { className: 'text-right flex items-center gap-1.5 font-sans' }, [
+                                                e('div', null, [
+                                                    e('p', { className: 'font-extrabold text-emerald-600 font-sans' }, `ผ่อนได้ ${formatNum(item.capacity)} บ.`),
+                                                    e('p', { className: 'text-[9.5px] text-slate-400 font-sans' }, `สุทธิ ${formatNum(item.netIncome)} บ.`)
+                                                ]),
+                                                e('button', { 
+                                                    onClick: (event) => {
+                                                        event.stopPropagation();
+                                                        triggerConfirm(`คุณต้องการลบประวัติการคำนวณของ "${item.customerName}" ใช่หรือไม่?`, () => {
+                                                            deleteHistoryItem(item.id, event);
+                                                        });
+                                                    },
+                                                    className: 'p-1 text-slate-400 hover:text-rose-600 transition rounded text-xs' 
+                                                }, '🗑️')
+                                            ])
+                                        ]))
+                                    )
+                                )
+                            )
+                        ])
+                    ])
+                ]),
+
+                // --- ส่วนแสดงผลตาราง YTD แบบเต็มหน้ากระดาษเมื่อพิมพ์หน้า 2 ---
+                showYtdAudit && e('div', { className: 'hidden print:block print-page-2 bg-white p-5 rounded-2xl border border-indigo-200 shadow-sm' }, [
+                    e('h2', { className: 'text-sm font-bold text-indigo-900 mb-3 pb-1 border-b-2 border-indigo-950 flex items-center gap-2' }, [
+                        e('span', null, '🔍'),
+                        'รายงานผลการตรวจสอบความสอดคล้องของรายได้สะสมในสลิป (YTD) - ประเมินปีต่อปี'
+                    ]),
+                    e('div', { className: 'overflow-hidden border border-indigo-100 rounded-lg' }, [
+                        e('table', { className: 'w-full text-left border-collapse text-[10px] table-fixed' }, [
+                            e('thead', { className: 'bg-indigo-50 text-indigo-900 uppercase font-bold' }, [
+                                e('tr', null, [
+                                    e('th', { className: 'p-2 border-b text-center w-[15%]' }, 'รอบสลิป'),
+                                    e('th', { className: 'p-2 border-b text-right w-[18%]' }, 'รายรับรวมในสลิป (บ.)'),
+                                    e('th', { className: 'p-2 border-b text-right text-rose-700 w-[18%]' }, 'หักปรับปรุงไม่คิดสะสม (บ.)'),
+                                    e('th', { className: 'p-2 border-b text-right text-indigo-800 w-[18%]' }, 'ยอดสะสมจริงบนสลิป (บ.)'),
+                                    e('th', { className: 'p-2 border-b text-right w-[18%]' }, 'ยอดสะสมบัญชีคำนวณ (บ.)'),
+                                    e('th', { className: 'p-2 border-b text-center w-[13%] whitespace-nowrap' }, 'ผลลัพธ์')
+                                ])
+                            ]),
+                            e('tbody', { className: 'divide-y divide-indigo-50' }, 
+                                incomeData.slice(0, activeRowsCount).map((row, idx) => {
+                                    const chronoIdx = activeRowsCount - 1 - idx; 
+                                    const savedState = ytdData[row.id] || {};
+                                    const grossValue = savedState.gross !== undefined && savedState.gross !== null ? savedState.gross : 0;
+                                    const actualYtd = savedState.actualYtd || 0;
+                                    const ytdDeduct = savedState.ytdDeduction || 0; 
+                                    const calculatedYtd = calculatedYtdObj[row.id] || 0;
+
+                                    let statusText = '';
+                                    let isBaseMonth = (chronoIdx === 0); 
+                                    let isResetMonth = isJanuary(row.label) && !isBaseMonth; 
+
+                                    if (isBaseMonth) {
+                                        statusText = '🏁 ยอดตั้งต้น';
+                                    } else {
+                                        const diff = Math.abs(calculatedYtd - actualYtd);
+                                        if (diff < 0.011) {
+                                            statusText = '🟢 ตรงกัน';
+                                        } else {
+                                            statusText = `🔴 ต่าง ${formatNum(Math.abs(calculatedYtd - actualYtd))} บ.`;
+                                        }
+                                    }
+
+                                    return e('tr', { key: `print-ytd-${row.id}`, className: isBaseMonth ? 'bg-amber-50/5' : '' }, [
+                                        e('td', { className: 'p-2 border-b text-center font-bold text-slate-800 font-sans' }, [
+                                            row.label || `${activeRowsCount - idx}`,
+                                            isBaseMonth && ' (เริ่มสะสม)',
+                                            isResetMonth && ' (รอบปีใหม่)'
+                                        ]),
+                                        e('td', { className: 'p-2 border-b text-right font-medium font-sans' }, formatDecimal(grossValue)),
+                                        e('td', { className: 'p-2 border-b text-right text-rose-600 font-bold font-sans' }, formatDecimal(ytdDeduct)),
+                                        e('td', { className: 'p-2 border-b text-right text-indigo-900 font-bold font-sans' }, formatDecimal(actualYtd)),
+                                        e('td', { className: 'p-2 border-b text-right font-bold text-slate-900 font-sans' }, formatDecimal(calculatedYtd)),
+                                        e('td', { className: 'p-2 border-b text-center font-bold text-xs whitespace-nowrap print:whitespace-nowrap' }, statusText)
+                                    ]);
+                                })
+                            )
+                        ])
+                    ])
+                ]),
+
+                // Footer
+                e('footer', { key: 'footer', className: 'mt-8 text-center text-[11px] text-slate-400 border-t border-slate-200 pt-4 no-print font-sans' }, [
+                    e('p', null, 'โปรแกรมประเมินวิเคราะห์สินเชื่อรายได้เบื้องต้นเพื่อใช้ภายในองค์กรเท่านั้น'),
+                    e('p', { className: 'mt-0.5 text-slate-300' }, 'พัฒนาด้วยเทคโนโลยี React 18 & Tailwind CSS')
+                ])
+            ]);
+        }
+
+        // เริ่มต้นการเรนเดอร์ React App
+        ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+    </script>
+</body>
+</html>
