@@ -1623,9 +1623,8 @@
                                                 const isContinuous = checkVarIncomeContinuity(col.id);
                                                 const avgVal = calculateAdjustedVar(col.id); 
                                                 const rawAvg = isContinuous ? avgVal : 0;
-                                                const isConstant = isConstantEveryMonth(col.id);
-                                                const applied80 = customerType !== 'welfare' && isManufacturing && !isConstant && isContinuous;
-                                                const finalColVal = applied80 ? Math.floor(avgVal * 0.8) : rawAvg;
+                                                const finalColVal = isContinuous ? calculateVarIncomeWithCondition(col.id) : 0;
+                                                const applied80 = isContinuous && customerType !== 'welfare' && isManufacturing && rawAvg > 0 && finalColVal < rawAvg;
 
                                                 let statusText = '';
                                                 let statusColor = 'text-slate-600';
@@ -1810,9 +1809,8 @@
                                                 varColumns.map(col => {
                                                     const isContinuous = checkVarIncomeContinuity(col.id);
                                                     const avgVal = calculateAdjustedVar(col.id); 
-                                                    const isConstant = isConstantEveryMonth(col.id);
-                                                    const applied80 = customerType !== 'welfare' && isManufacturing && !isConstant && isContinuous;
-                                                    const finalColVal = applied80 ? Math.floor(avgVal * 0.8) : avgVal;
+                                                    const finalColVal = isContinuous ? calculateVarIncomeWithCondition(col.id) : 0;
+                                                    const applied80 = isContinuous && customerType !== 'welfare' && isManufacturing && avgVal > 0 && finalColVal < avgVal;
 
                                                     let badgeNode = null;
                                                     if (!isContinuous) {
