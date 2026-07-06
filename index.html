@@ -1448,7 +1448,7 @@
                                         e('input', { 
                                             type: 'checkbox', 
                                             checked: isManufacturing, 
-                                            onChange: (e) => setIsManufacturing(e.checked),
+                                            onChange: (e) => setIsManufacturing(e.target.checked),
                                             className: 'w-4 h-4 rounded text-blue-600 focus:ring-blue-500'
                                         }),
                                         e('div', null, [
@@ -1609,13 +1609,13 @@
                                 e('div', { className: 'font-bold text-slate-800 border-b-2 border-slate-400 pb-1 text-[9.5px]' }, [
                                     e('span', null, `📋 รายละเอียดวิเคราะห์รายได้เสริมเฉลี่ยและสิทธิ์ความต่อเนื่อง`)
                                 ]),
-                                e('div', { className: 'overflow-x-auto pt-1' }, [
-                                    e('table', { className: 'w-full text-center border-collapse text-[10px] border border-slate-200' }, [
+                                e('div', { className: 'overflow-hidden pt-1' }, [
+                                    e('table', { className: 'w-full text-center border-collapse text-[10px] border border-slate-200 table-fixed' }, [
                                         e('thead', { className: 'bg-slate-100 text-slate-700 font-bold border-b border-slate-200' }, [
                                             e('tr', null, [
-                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[30%]' }, 'ประเภทรายได้เสริม'),
-                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[35%]' }, 'สถานะความต่อเนื่อง'),
-                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[35%]' }, 'ยอดเฉลี่ยประเมิน')
+                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[23%]' }, 'ประเภทรายได้เสริม'),
+                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[52%]' }, 'สถานะความต่อเนื่อง'),
+                                                e('th', { className: 'p-1.5 border border-slate-200 text-center w-[25%]' }, 'ยอดเฉลี่ยประเมิน')
                                             ])
                                         ]),
                                         e('tbody', { className: 'divide-y divide-slate-100 bg-white' }, 
@@ -1624,7 +1624,7 @@
                                                 const avgVal = calculateAdjustedVar(col.id); 
                                                 const rawAvg = isContinuous ? avgVal : 0;
                                                 const finalColVal = isContinuous ? calculateVarIncomeWithCondition(col.id) : 0;
-                                                const applied80 = isContinuous && customerType !== 'welfare' && isManufacturing && rawAvg > 0 && finalColVal < rawAvg;
+                                                const applied80 = isContinuous && customerType !== 'welfare' && isManufacturing && !isConstantEveryMonth(col.id);
 
                                                 let statusText = '';
                                                 let statusColor = 'text-slate-600';
@@ -1635,16 +1635,16 @@
                                                     statusText = '✅ สวัสดิการ (100%)';
                                                     statusColor = 'text-emerald-700 font-bold';
                                                 } else if (applied80) {
-                                                    statusText = '⚠️ ต่อเนื่อง แต่ไม่เท่ากัน (คิด 80%)';
+                                                    statusText = '⚠️ ต่อเนื่องแต่ไม่เท่ากัน (คิด 80%)';
                                                     statusColor = 'text-amber-700 font-bold';
                                                 } else {
-                                                    statusText = isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่อง (100%)';
+                                                    statusText = isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่องตามเกณฑ์ (100%)';
                                                     statusColor = 'text-emerald-700 font-bold';
                                                 }
 
                                                 return e('tr', { key: `print-detail-row-${col.id}` }, [
                                                     e('td', { className: 'p-1.5 border border-slate-200 text-center font-bold text-slate-800' }, col.label),
-                                                    e('td', { className: `p-1.5 border border-slate-200 text-center ${statusColor}` }, statusText),
+                                                    e('td', { className: `p-1.5 border border-slate-200 text-center whitespace-nowrap ${statusColor}` }, statusText),
                                                     e('td', { className: `p-1.5 border border-slate-200 text-center font-bold ${finalColVal > 0 ? 'text-emerald-700' : 'text-slate-400'}` }, 
                                                         finalColVal > 0 ? `${formatNum(finalColVal)} บาท` : '0 บาท'
                                                     )
@@ -1796,13 +1796,13 @@
                                         }, showVarDetails ? 'ซ่อน' : 'แสดง')
                                     ]),
 
-                                    showVarDetails && e('div', { className: 'overflow-x-auto pt-1' }, [
-                                        e('table', { className: 'w-full text-center border-collapse text-[10px] border border-slate-200' }, [
+                                    showVarDetails && e('div', { className: 'overflow-hidden pt-1' }, [
+                                        e('table', { className: 'w-full text-center border-collapse text-[10px] border border-slate-200 table-fixed' }, [
                                             e('thead', { className: 'bg-slate-100 text-slate-700 font-bold border-b border-slate-200' }, [
                                                 e('tr', null, [
-                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[30%]' }, 'รายการอื่น'),
-                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[40%]' }, 'ความต่อเนื่องในสลิป'),
-                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[30%]' }, 'เฉลี่ยคิดให้')
+                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[22%]' }, 'รายการอื่น'),
+                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[53%]' }, 'ความต่อเนื่องในสลิป'),
+                                                    e('th', { className: 'p-1.5 border border-slate-200 text-center w-[25%]' }, 'เฉลี่ยคิดให้')
                                                 ])
                                             ]),
                                             e('tbody', { className: 'divide-y divide-slate-100 bg-white font-sans' }, 
@@ -1810,20 +1810,20 @@
                                                     const isContinuous = checkVarIncomeContinuity(col.id);
                                                     const avgVal = calculateAdjustedVar(col.id); 
                                                     const finalColVal = isContinuous ? calculateVarIncomeWithCondition(col.id) : 0;
-                                                    const applied80 = isContinuous && customerType !== 'welfare' && isManufacturing && avgVal > 0 && finalColVal < avgVal;
+                                                    const applied80 = isContinuous && customerType !== 'welfare' && isManufacturing && !isConstantEveryMonth(col.id);
 
                                                     let badgeNode = null;
                                                     if (!isContinuous) {
-                                                        badgeNode = e('span', { className: 'text-rose-600 font-bold bg-rose-50 border border-rose-100 px-1 py-0.5 rounded text-[9px]' }, '❌ ไม่ต่อเนื่อง (เป็น 0)');
+                                                        badgeNode = e('span', { className: 'text-rose-600 font-bold bg-rose-50 border border-rose-100 px-1 py-0.5 rounded text-[9px] whitespace-nowrap inline-flex items-center' }, '❌ ไม่ต่อเนื่อง (เป็น 0)');
                                                     } else if (applied80) {
-                                                        badgeNode = e('span', { className: 'text-amber-700 font-bold bg-amber-50 border border-amber-100 px-1 py-0.5 rounded text-[9px]' }, '⚠️ ต่อเนื่อง แต่ไม่เท่ากัน (คิด 80%)');
+                                                        badgeNode = e('span', { className: 'text-amber-700 font-bold bg-amber-50 border border-amber-100 px-1 py-0.5 rounded text-[8px] whitespace-nowrap inline-flex items-center leading-none' }, '⚠️ ต่อเนื่องแต่ไม่เท่ากัน (คิด 80%)');
                                                     } else {
-                                                        badgeNode = e('span', { className: 'text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded text-[9px]' }, isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่อง (100%)');
+                                                        badgeNode = e('span', { className: 'text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded text-[9px] whitespace-nowrap inline-flex items-center' }, isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่องตามเกณฑ์ (100%)');
                                                     }
 
                                                     return e('tr', { key: `detail-row-${col.id}` }, [
                                                         e('td', { className: 'p-1.5 border border-slate-200 text-center font-bold text-slate-800' }, col.label),
-                                                        e('td', { className: 'p-1.5 border border-slate-200 text-center' }, badgeNode),
+                                                        e('td', { className: 'p-1.5 border border-slate-200 text-center whitespace-nowrap' }, badgeNode),
                                                         e('td', { className: `p-1.5 border border-slate-200 text-center font-bold ${finalColVal > 0 ? 'text-emerald-700' : 'text-slate-400'}` }, 
                                                             finalColVal > 0 ? `${formatNum(finalColVal)} บาท` : '0 บาท'
                                                         )
