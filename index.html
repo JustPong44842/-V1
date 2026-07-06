@@ -1048,21 +1048,20 @@
                         .replace(/\(มหาชน\)/g, '')
                         .replace(/(ห้างหุ้นส่วนจำกัด|ห้างหุ้นส่วนสามัญ|หจก\.?|บริษัท|บมจ\.|บจก\.|บจ\.|บ\.|จำกัด|มหาชน)/g, '')
                         .replace(/\s+/g, ' ')
-                        .trim();
+                        .trim() || companyName.trim();
                     
                     copyToClipboard(cleanedName);
                     setDbdCopied(true);
                     setTimeout(() => setDbdCopied(false), 2500);
-                    // เปิดผ่าน hash route เพื่อไม่ให้เซิร์ฟเวอร์ DBD ตอบ 404 เมื่อเข้าหน้าค้นหาโดยตรง
-                    // ส่งชื่อไปทั้ง keyword/keyWord เพราะ DBD เคยเปลี่ยนชื่อพารามิเตอร์รับค่าค้นหา
+                    // เว็บ DBD ใช้ Nuxt route /juristic/searchInfo?keyword=... เพื่อให้หน้าอ่านคำค้นและค้นหาอัตโนมัติ
                     const encodedDbdName = encodeURIComponent(cleanedName);
-                    url = `https://datawarehouse.dbd.go.th/#/juristic/searchInfo?keyword=${encodedDbdName}&keyWord=${encodedDbdName}`;
+                    url = `https://datawarehouse.dbd.go.th/juristic/searchInfo?keyword=${encodedDbdName}`;
                 }
                 
                 if (url) {
                     window.open(url, '_blank');
                     if (type === 'dbd') {
-                        setAlertMessage('เปิดหน้า DBD พร้อมส่งชื่อบริษัทไปค้นหาแล้วครับ หากเว็บ DBD ยังไม่เติมคำค้นให้อัตโนมัติ กด Ctrl+V แล้ว Enter ได้เลย (ระบบคัดลอกชื่อไว้ให้แล้ว)');
+                        setAlertMessage('เปิดหน้า DBD พร้อมส่งชื่อบริษัทไปค้นหาแล้วครับ หากเว็บ DBD ยังไม่ค้นหาอัตโนมัติ กด Ctrl+V แล้ว Enter ได้เลย (ระบบคัดลอกชื่อไว้ให้แล้ว)');
                     }
                 }
             };
@@ -1637,7 +1636,7 @@
                                                     statusText = '✅ สวัสดิการ (100%)';
                                                     statusColor = 'text-emerald-700 font-bold';
                                                 } else if (applied80) {
-                                                    statusText = '⚠️ ต่อเนื่องกลุ่มอุตสาหกรรม (80%)';
+                                                    statusText = '⚠️ ต่อเนื่อง แต่ไม่เท่ากัน (คิด 80%)';
                                                     statusColor = 'text-amber-700 font-bold';
                                                 } else {
                                                     statusText = isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่อง (100%)';
@@ -1819,7 +1818,7 @@
                                                     if (!isContinuous) {
                                                         badgeNode = e('span', { className: 'text-rose-600 font-bold bg-rose-50 border border-rose-100 px-1 py-0.5 rounded text-[9px]' }, '❌ ไม่ต่อเนื่อง (เป็น 0)');
                                                     } else if (applied80) {
-                                                        badgeNode = e('span', { className: 'text-amber-700 font-bold bg-amber-50 border border-amber-100 px-1 py-0.5 rounded text-[9px]' }, '⚠️ ต่อเนื่อง (คิด 80%)');
+                                                        badgeNode = e('span', { className: 'text-amber-700 font-bold bg-amber-50 border border-amber-100 px-1 py-0.5 rounded text-[9px]' }, '⚠️ ต่อเนื่อง แต่ไม่เท่ากัน (คิด 80%)');
                                                     } else {
                                                         badgeNode = e('span', { className: 'text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded text-[9px]' }, isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่อง (100%)');
                                                     }
