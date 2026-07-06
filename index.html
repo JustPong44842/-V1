@@ -559,18 +559,22 @@
                 }
             }, [customerType, netBaseSalary]);
 
-            const isConstant3Months = (key) => {
+            const isConstantEveryMonth = (key) => {
+                const limit = slipType === 'double' ? monthsCount * 2 : monthsCount;
+                const subset = incomeData.slice(0, limit);
+
                 if (slipType === 'double') {
-                    const m0 = (incomeData[0]?.[key] || 0) + (incomeData[1]?.[key] || 0);
-                    const m1 = (incomeData[2]?.[key] || 0) + (incomeData[3]?.[key] || 0);
-                    const m2 = (incomeData[4]?.[key] || 0) + (incomeData[5]?.[key] || 0);
-                    return m0 > 0 && m0 === m1 && m1 === m2;
-                } else {
-                    const v0 = incomeData[0]?.[key] || 0;
-                    const v1 = incomeData[1]?.[key] || 0;
-                    const v2 = incomeData[2]?.[key] || 0;
-                    return v0 > 0 && v0 === v1 && v1 === v2;
+                    const monthlySums = [];
+                    for (let i = 0; i < monthsCount; i++) {
+                        const sum = (subset[i * 2]?.[key] || 0) + (subset[i * 2 + 1]?.[key] || 0);
+                        monthlySums.push(sum);
+                    }
+                    const firstMonthSum = monthlySums[0] || 0;
+                    return firstMonthSum > 0 && monthlySums.every(val => val === firstMonthSum);
                 }
+
+                const firstMonthValue = subset[0]?.[key] || 0;
+                return firstMonthValue > 0 && subset.every(row => (row[key] || 0) === firstMonthValue);
             };
 
             const calculateVarIncomeWithCondition = (key) => {
@@ -578,7 +582,7 @@
                 if (customerType === 'welfare') {
                     return avgVal;
                 }
-                if (isManufacturing && !isConstant3Months(key)) {
+                if (isManufacturing && !isConstantEveryMonth(key)) {
                     return Math.floor(avgVal * 0.8);
                 }
                 return avgVal;
@@ -1039,20 +1043,28 @@
                 } else if (type === 'map') {
                     url = `https://www.google.com/maps?q=${encodeURIComponent(companyName)}`;
                 } else if (type === 'dbd') {
-                    // ล้างประเภทนิติบุคคลโดยตัดคำว่า "บริษัท", "จำกัด", "มหาชน" และ "(มหาชน)"
+                    // ล้างประเภทนิติบุคคลโดยตัดคำว่า "บริษัท", "หจก.", "บ.", "บจก.", "(มหาชน)", "จำกัด" ฯลฯ
                     const cleanedName = companyName
                         .replace(/\(มหาชน\)/g, '')
-                        .replace(/(บริษัท|จำกัด|มหาชน|บจก\.|บมจ\.|บจ\.)/g, '')
+                        .replace(/(ห้างหุ้นส่วนจำกัด|ห้างหุ้นส่วนสามัญ|หจก\.?|บริษัท|บมจ\.|บจก\.|บจ\.|บ\.|จำกัด|มหาชน)/g, '')
                         .replace(/\s+/g, ' ')
                         .trim();
                     
                     copyToClipboard(cleanedName);
                     setDbdCopied(true);
-                    setTimeout(() => setDbdCopied(false), 2000);
-                    url = `https://datawarehouse.dbd.go.th/search?keyWord=${encodeURIComponent(cleanedName)}`;
+                    setTimeout(() => setDbdCopied(false), 2500);
+                    // เปิดผ่าน hash route เพื่อไม่ให้เซิร์ฟเวอร์ DBD ตอบ 404 เมื่อเข้าหน้าค้นหาโดยตรง
+                    // ส่งชื่อไปทั้ง keyword/keyWord เพราะ DBD เคยเปลี่ยนชื่อพารามิเตอร์รับค่าค้นหา
+                    const encodedDbdName = encodeURIComponent(cleanedName);
+                    url = `https://datawarehouse.dbd.go.th/#/juristic/searchInfo?keyword=${encodedDbdName}&keyWord=${encodedDbdName}`;
                 }
                 
-                if (url) window.open(url, '_blank');
+                if (url) {
+                    window.open(url, '_blank');
+                    if (type === 'dbd') {
+                        setAlertMessage('เปิดหน้า DBD พร้อมส่งชื่อบริษัทไปค้นหาแล้วครับ หากเว็บ DBD ยังไม่เติมคำค้นให้อัตโนมัติ กด Ctrl+V แล้ว Enter ได้เลย (ระบบคัดลอกชื่อไว้ให้แล้ว)');
+                    }
+                }
             };
 
             const filteredHistory = history.filter(item => {
@@ -1376,10 +1388,10 @@
                                     e('button', {
                                         onClick: () => openSearch('dbd'),
                                         className: 'flex-1 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold border border-amber-100 rounded-lg text-xs transition flex flex-row items-center justify-center gap-1.5 h-[38px]',
-                                        title: 'ระบบจะตัดคำว่า "บริษัท", "จำกัด", "(มหาชน)" พร้อมคัดลอกลง Clipboard และเปิดระบบ DBD'
+                                        title: 'ระบบจะตัดคำว่า "บริษัท", "หจก.", "บ.", "จำกัด", "(มหาชน)" ออก แล้วเปิดหน้าค้นหาของ DBD พร้อมชื่อบริษัททันที (หากเว็บให้ล็อกอินก่อน ชื่อที่ตัดแล้วถูกคัดลอกไว้ใน Clipboard ให้วางได้เลย)'
                                     }, [
                                         e('span', null, dbdCopied ? '📋' : '🏢'),
-                                        dbdCopied ? 'คัดลอกชื่อแล้ว!' : 'ค้นหา DBD'
+                                        dbdCopied ? 'กำลังเปิดค้นหา...' : 'ค้นหา DBD'
                                     ]),
                                     e('button', {
                                         onClick: () => openSearch('map'),
@@ -1612,8 +1624,8 @@
                                                 const isContinuous = checkVarIncomeContinuity(col.id);
                                                 const avgVal = calculateAdjustedVar(col.id); 
                                                 const rawAvg = isContinuous ? avgVal : 0;
-                                                const isConstant = isConstant3Months(col.id);
-                                                const applied80 = isManufacturing && !isConstant && isContinuous;
+                                                const isConstant = isConstantEveryMonth(col.id);
+                                                const applied80 = customerType !== 'welfare' && isManufacturing && !isConstant && isContinuous;
                                                 const finalColVal = applied80 ? Math.floor(avgVal * 0.8) : rawAvg;
 
                                                 let statusText = '';
@@ -1628,7 +1640,7 @@
                                                     statusText = '⚠️ ต่อเนื่องกลุ่มอุตสาหกรรม (80%)';
                                                     statusColor = 'text-amber-700 font-bold';
                                                 } else {
-                                                    statusText = '✅ ได้ต่อเนื่องทุกเดือน (100%)';
+                                                    statusText = isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่อง (100%)';
                                                     statusColor = 'text-emerald-700 font-bold';
                                                 }
 
@@ -1799,8 +1811,8 @@
                                                 varColumns.map(col => {
                                                     const isContinuous = checkVarIncomeContinuity(col.id);
                                                     const avgVal = calculateAdjustedVar(col.id); 
-                                                    const isConstant = isConstant3Months(col.id);
-                                                    const applied80 = isManufacturing && !isConstant && isContinuous;
+                                                    const isConstant = isConstantEveryMonth(col.id);
+                                                    const applied80 = customerType !== 'welfare' && isManufacturing && !isConstant && isContinuous;
                                                     const finalColVal = applied80 ? Math.floor(avgVal * 0.8) : avgVal;
 
                                                     let badgeNode = null;
@@ -1809,7 +1821,7 @@
                                                     } else if (applied80) {
                                                         badgeNode = e('span', { className: 'text-amber-700 font-bold bg-amber-50 border border-amber-100 px-1 py-0.5 rounded text-[9px]' }, '⚠️ ต่อเนื่อง (คิด 80%)');
                                                     } else {
-                                                        badgeNode = e('span', { className: 'text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded text-[9px]' }, '✅ ต่อเนื่อง (เฉลี่ย 100%)');
+                                                        badgeNode = e('span', { className: 'text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-1 py-0.5 rounded text-[9px]' }, isManufacturing ? '✅ ได้เท่ากันทุกเดือน (100%)' : '✅ ต่อเนื่อง (100%)');
                                                     }
 
                                                     return e('tr', { key: `detail-row-${col.id}` }, [
